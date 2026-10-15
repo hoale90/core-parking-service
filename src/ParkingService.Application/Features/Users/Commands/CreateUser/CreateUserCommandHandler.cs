@@ -33,6 +33,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
             Gender = request.Gender?.Trim(),
             Phone = request.Phone?.Trim(),
             Email = request.Email?.Trim().ToLowerInvariant(),
+            PlateNumber = request.PlateNumber?.Trim().ToUpperInvariant(),
             Status = request.Status,
             CreatedAt = _dateTimeProvider.UtcNow,
             IsDeleted = false
@@ -49,6 +50,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
             Gender = user.Gender,
             Phone = user.Phone,
             Email = user.Email,
+            PlateNumber = user.PlateNumber,
             Status = user.Status,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

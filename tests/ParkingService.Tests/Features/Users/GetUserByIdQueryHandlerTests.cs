@@ -51,6 +51,7 @@ public class GetUserByIdQueryHandlerTests
             Email = "phuc.dang@example.com",
             Phone = "0933112233",
             Gender = "Nam",
+            PlateNumber = "29A-888.88",
             Status = UserStatus.Active,
             CreatedAt = DateTime.UtcNow
         };
@@ -69,6 +70,7 @@ public class GetUserByIdQueryHandlerTests
         result.Id.Should().Be(userId);
         result.FullName.Should().Be("Đặng Hoàng Phúc");
         result.Email.Should().Be("phuc.dang@example.com");
+        result.PlateNumber.Should().Be("29A-888.88");
         result.Status.Should().Be(UserStatus.Active);
     }
 }

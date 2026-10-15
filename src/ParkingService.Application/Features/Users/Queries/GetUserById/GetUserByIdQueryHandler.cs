@@ -31,6 +31,7 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDto
             Gender = user.Gender,
             Phone = user.Phone,
             Email = user.Email,
+            PlateNumber = user.PlateNumber,
             Status = user.Status,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

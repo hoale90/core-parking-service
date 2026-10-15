@@ -27,6 +27,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Email)
             .HasMaxLength(150);
 
+        builder.Property(u => u.PlateNumber)
+            .HasMaxLength(20);
+
         builder.Property(u => u.Status)
             .HasConversion<string>()
             .HasMaxLength(20)

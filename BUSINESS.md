@@ -13,7 +13,7 @@ Theo tài liệu [parking_management_requirements.md](file:///D:/Projects/parkin
 1. **Kết nối Database**: SQLite với EF Core 8, tự động chạy migration khi khởi động ứng dụng.
 2. **Cấu hình OCR Service**: Tích hợp với Python OCR Service qua HTTP Client (`/health`, `/ocr`).
 3. **Quản lý Người dùng (User Management)**:
-   - Entity `User`: `Id`, `FullName`, `DateOfBirth`, `Gender`, `Phone`, `Email`, `Status` (Active, Disabled), `CreatedAt`, `UpdatedAt`.
+   - Entity `User`: `Id`, `FullName`, `DateOfBirth`, `Gender`, `Phone`, `Email`, `PlateNumber`, `Status` (Active, Disabled), `CreatedAt`, `UpdatedAt`.
 4. **Quản lý Thẻ gửi xe (Card Management)**:
    - Entity `Card`: `Id`, `CardNumber` (unique), `UserId` (nullable), `Status` (Active, Blocked, Lost), `CreatedAt`, `UpdatedAt`.
    - `Card.UserId` cho phép `NULL` (hỗ trợ thẻ chưa gán người dùng hoặc thẻ khách).
@@ -90,6 +90,7 @@ Content-Type: application/json
   "gender": "Nam",
   "phone": "0912345678",
   "email": "nam.nguyen@example.com",
+  "plateNumber": "59-X1 123.45",
   "status": 1
 }
 ```
@@ -105,6 +106,7 @@ Content-Type: application/json
     "gender": "Nam",
     "phone": "0912345678",
     "email": "nam.nguyen@example.com",
+    "plateNumber": "59-X1 123.45",
     "status": 1,
     "createdAt": "2026-10-15T14:15:30.1234567Z",
     "updatedAt": null

@@ -103,6 +103,10 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
+                b.Property<string>("PlateNumber")
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
                 b.Property<string>("Status")
                     .IsRequired()
                     .HasMaxLength(20)

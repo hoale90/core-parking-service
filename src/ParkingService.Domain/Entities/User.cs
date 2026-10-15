@@ -13,6 +13,7 @@ public class User : BaseEntity
     public string? Gender { get; set; }
     public string? Phone { get; set; }
     public string? Email { get; set; }
+    public string? PlateNumber { get; set; }
     public UserStatus Status { get; set; } = UserStatus.Active;
 
     // Navigation property

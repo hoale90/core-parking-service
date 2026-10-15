@@ -26,7 +26,8 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PaginatedResu
             (string.IsNullOrWhiteSpace(request.SearchTerm) ||
              u.FullName.Contains(request.SearchTerm) ||
              (u.Email != null && u.Email.Contains(request.SearchTerm)) ||
-             (u.Phone != null && u.Phone.Contains(request.SearchTerm)));
+             (u.Phone != null && u.Phone.Contains(request.SearchTerm)) ||
+             (u.PlateNumber != null && u.PlateNumber.Contains(request.SearchTerm)));
 
         var pagedUsers = await _userRepository.GetPagedAsync(
             pageNumber,
@@ -45,6 +46,7 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PaginatedResu
                 Gender = u.Gender,
                 Phone = u.Phone,
                 Email = u.Email,
+                PlateNumber = u.PlateNumber,
                 Status = u.Status,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt

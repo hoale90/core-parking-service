@@ -27,5 +27,10 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
         RuleFor(x => x.DateOfBirth)
             .LessThan(DateTime.UtcNow).WithMessage("Ngày sinh phải nhỏ hơn ngày hiện tại.")
             .When(x => x.DateOfBirth.HasValue);
+
+        RuleFor(x => x.PlateNumber)
+            .MaximumLength(20).WithMessage("Số xe không được vượt quá 20 ký tự.")
+            .Matches(@"^[a-zA-Z0-9.\-\s]+$").WithMessage("Số xe chứa ký tự không hợp lệ.")
+            .When(x => !string.IsNullOrWhiteSpace(x.PlateNumber));
     }
 }

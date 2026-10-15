@@ -46,6 +46,7 @@ public class CreateUserCommandHandlerTests
             Gender: "Nam",
             Phone: "0901234567",
             Email: "AN.NGUYEN@GMAIL.COM",
+            PlateNumber: "59-x1 123.45",
             Status: UserStatus.Active);
 
         // Act
@@ -56,6 +57,7 @@ public class CreateUserCommandHandlerTests
         result.Id.Should().NotBeEmpty();
         result.FullName.Should().Be("Nguyễn Văn An");
         result.Email.Should().Be("an.nguyen@gmail.com"); // normalized to lowercase
+        result.PlateNumber.Should().Be("59-X1 123.45"); // normalized to uppercase
         result.Phone.Should().Be("0901234567");
         result.Gender.Should().Be("Nam");
         result.Status.Should().Be(UserStatus.Active);
@@ -65,6 +67,7 @@ public class CreateUserCommandHandlerTests
         capturedUser.Should().NotBeNull();
         capturedUser!.FullName.Should().Be("Nguyễn Văn An");
         capturedUser.Email.Should().Be("an.nguyen@gmail.com");
+        capturedUser.PlateNumber.Should().Be("59-X1 123.45");
         capturedUser.CreatedAt.Should().Be(fixedTime);
         capturedUser.IsDeleted.Should().BeFalse();
 

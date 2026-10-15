@@ -96,6 +96,41 @@ public class CreateUserCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_WhenPlateNumberExceeds20Characters_ShouldHaveValidationError()
+    {
+        // Arrange
+        var longPlate = new string('A', 21);
+        var command = new CreateUserCommand(
+            FullName: "Nguyễn Văn An",
+            PlateNumber: longPlate);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.PlateNumber)
+            .WithErrorMessage("Số xe không được vượt quá 20 ký tự.");
+    }
+
+    [Theory]
+    [InlineData("59-X1@123")]
+    [InlineData("29A#88888")]
+    public void Validate_WhenPlateNumberContainsInvalidCharacters_ShouldHaveValidationError(string invalidPlate)
+    {
+        // Arrange
+        var command = new CreateUserCommand(
+            FullName: "Nguyễn Văn An",
+            PlateNumber: invalidPlate);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.PlateNumber)
+            .WithErrorMessage("Số xe chứa ký tự không hợp lệ.");
+    }
+
+    [Fact]
     public void Validate_WhenAllFieldsAreValid_ShouldNotHaveAnyValidationErrors()
     {
         // Arrange
@@ -104,7 +139,8 @@ public class CreateUserCommandValidatorTests
             DateOfBirth: new DateTime(1990, 5, 15, 0, 0, 0, DateTimeKind.Utc),
             Gender: "Nam",
             Phone: "0912345678",
-            Email: "nam.nguyen@example.com");
+            Email: "nam.nguyen@example.com",
+            PlateNumber: "59-X1 123.45");
 
         // Act
         var result = _validator.TestValidate(command);

@@ -38,6 +38,11 @@ public class UserDto
     public string? Email { get; set; }
 
     /// <summary>
+    /// Biển số xe đăng ký (ví dụ: "59-X1 123.45").
+    /// </summary>
+    public string? PlateNumber { get; set; }
+
+    /// <summary>
     /// Trạng thái tài khoản (1 = Active, 2 = Disabled).
     /// </summary>
     public UserStatus Status { get; set; }
