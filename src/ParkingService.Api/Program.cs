@@ -1,5 +1,8 @@
+using System.Reflection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using Serilog;
+using Swashbuckle.AspNetCore.SwaggerUI;
 using ParkingService.Api.Middleware;
 using ParkingService.Application;
 using ParkingService.Infrastructure;
@@ -31,12 +34,62 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Parking Service API",
+        Title = "🅿️ Core Parking Service API",
         Version = "v1",
-        Description = "Core Parking Service - Hệ thống quản lý bãi đỗ xe thông minh (Phase 1: User & Card APIs)"
+        Description = """
+        ### Hệ Thống Quản Lý Bãi Đỗ Xe Thông Minh (Core Parking Service)
+
+        API backend hỗ trợ quản lý người dùng, thẻ gửi xe RFID/Mifare, tích hợp OCR nhận diện biển số và điều khiển barrier.
+
+        #### 📦 Chuẩn hóa phản hồi API:
+        Mọi endpoint trả về định dạng JSON thống nhất:
+        ```json
+        {
+          "success": true,
+          "data": { ... },
+          "error": null
+        }
+        ```
+        Khi xảy ra lỗi:
+        ```json
+        {
+          "success": false,
+          "data": null,
+          "error": {
+            "code": "VALIDATION_ERROR | NOT_FOUND | CONFLICT | DOMAIN_ERROR | INTERNAL_ERROR",
+            "message": "Thông điệp lỗi chi tiết",
+            "details": { ... }
+          }
+        }
+        ```
+
+        #### 📋 Phạm vi Giai đoạn 1:
+        - **Users**: Thêm, lấy danh sách, lấy chi tiết người dùng.
+        - **Cards**: Thêm thẻ (hỗ trợ `userId = null`), danh sách, chi tiết thẻ (ràng buộc `CardNumber` duy nhất).
+        """,
+        Contact = new OpenApiContact
+        {
+            Name = "Core Parking Service Team",
+            Url = new Uri("https://github.com/hoale90/core-parking-service")
+        }
     });
+
+    // Tích hợp XML Comments từ Api và Application layers
+    var xmlFileApi = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPathApi = Path.Combine(AppContext.BaseDirectory, xmlFileApi);
+    if (File.Exists(xmlPathApi))
+    {
+        options.IncludeXmlComments(xmlPathApi, includeControllerXmlComments: true);
+    }
+
+    var xmlFileApp = "ParkingService.Application.xml";
+    var xmlPathApp = Path.Combine(AppContext.BaseDirectory, xmlFileApp);
+    if (File.Exists(xmlPathApp))
+    {
+        options.IncludeXmlComments(xmlPathApp);
+    }
 });
 
 // CORS
@@ -73,11 +126,21 @@ using (var scope = app.Services.CreateScope())
 // Middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-if (app.Environment.IsDevelopment())
+// Enable Swagger UI for interactive testing
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Parking Service API v1"));
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Core Parking Service API v1");
+    c.RoutePrefix = "swagger";
+    c.DocumentTitle = "Parking Service API Documentation & Testing";
+    c.DisplayRequestDuration();
+    c.DocExpansion(DocExpansion.List);
+    c.EnableFilter();
+    c.EnableDeepLinking();
+});
+
+// Redirect root to Swagger UI for quick testing
+app.MapGet("/", () => Results.Redirect("/swagger"));
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
