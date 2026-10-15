@@ -43,6 +43,12 @@ public class ExceptionHandlingMiddleware
                 validationEx.Message,
                 (object?)validationEx.Errors),
 
+            ConflictException conflictEx => (
+                (int)HttpStatusCode.Conflict,
+                "CONFLICT",
+                conflictEx.Message,
+                (object?)null),
+
             NotFoundException notFoundEx => (
                 (int)HttpStatusCode.NotFound,
                 "NOT_FOUND",

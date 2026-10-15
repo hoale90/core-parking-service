@@ -1,7 +1,9 @@
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using ParkingService.Api.Middleware;
 using ParkingService.Application;
 using ParkingService.Infrastructure;
+using ParkingService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,7 +35,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Parking Service API",
         Version = "v1",
-        Description = "Core Parking Service - Parking Management System API"
+        Description = "Core Parking Service - Hệ thống quản lý bãi đỗ xe thông minh (Phase 1: User & Card APIs)"
     });
 });
 
@@ -49,6 +51,24 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// Auto-migrate SQLite Database on application start
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        Log.Information("Applying EF Core migrations to SQLite database...");
+        context.Database.Migrate();
+        Log.Information("Database migrations applied successfully.");
+    }
+    catch (Exception ex)
+    {
+        Log.Error(ex, "An error occurred while applying database migrations.");
+        throw;
+    }
+}
 
 // Middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();

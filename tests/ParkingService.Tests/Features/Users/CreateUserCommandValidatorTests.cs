@@ -1,0 +1,115 @@
+using FluentAssertions;
+using FluentValidation.TestHelper;
+using ParkingService.Application.Features.Users.Commands.CreateUser;
+using Xunit;
+
+namespace ParkingService.Tests.Features.Users;
+
+public class CreateUserCommandValidatorTests
+{
+    private readonly CreateUserCommandValidator _validator = new();
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void Validate_WhenFullNameIsEmpty_ShouldHaveValidationError(string? fullName)
+    {
+        // Arrange
+        var command = new CreateUserCommand(FullName: fullName!);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.FullName)
+            .WithErrorMessage("Họ và tên không được để trống.");
+    }
+
+    [Fact]
+    public void Validate_WhenFullNameExceeds200Characters_ShouldHaveValidationError()
+    {
+        // Arrange
+        var longName = new string('A', 201);
+        var command = new CreateUserCommand(FullName: longName);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.FullName)
+            .WithErrorMessage("Họ và tên không được vượt quá 200 ký tự.");
+    }
+
+    [Theory]
+    [InlineData("not-an-email")]
+    [InlineData("missing@domain")]
+    [InlineData("@nodomain.com")]
+    public void Validate_WhenEmailIsInvalidFormat_ShouldHaveValidationError(string invalidEmail)
+    {
+        // Arrange
+        var command = new CreateUserCommand(
+            FullName: "Nguyễn Văn A",
+            Email: invalidEmail);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.Email)
+            .WithErrorMessage("Địa chỉ email không đúng định dạng.");
+    }
+
+    [Theory]
+    [InlineData("0912abc345")]
+    [InlineData("++84#12345")]
+    public void Validate_WhenPhoneContainsInvalidCharacters_ShouldHaveValidationError(string invalidPhone)
+    {
+        // Arrange
+        var command = new CreateUserCommand(
+            FullName: "Trần Thị B",
+            Phone: invalidPhone);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.Phone)
+            .WithErrorMessage("Số điện thoại chứa ký tự không hợp lệ.");
+    }
+
+    [Fact]
+    public void Validate_WhenDateOfBirthIsInFuture_ShouldHaveValidationError()
+    {
+        // Arrange
+        var futureDate = DateTime.UtcNow.AddDays(1);
+        var command = new CreateUserCommand(
+            FullName: "Lê Văn C",
+            DateOfBirth: futureDate);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.DateOfBirth)
+            .WithErrorMessage("Ngày sinh phải nhỏ hơn ngày hiện tại.");
+    }
+
+    [Fact]
+    public void Validate_WhenAllFieldsAreValid_ShouldNotHaveAnyValidationErrors()
+    {
+        // Arrange
+        var command = new CreateUserCommand(
+            FullName: "Nguyễn Văn Nam",
+            DateOfBirth: new DateTime(1990, 5, 15, 0, 0, 0, DateTimeKind.Utc),
+            Gender: "Nam",
+            Phone: "0912345678",
+            Email: "nam.nguyen@example.com");
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+}

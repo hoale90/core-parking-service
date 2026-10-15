@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ParkingService.Application.Common.Interfaces;
+using ParkingService.Application.Common.Models;
 using ParkingService.Infrastructure.Persistence;
 using ParkingService.Infrastructure.Services;
 
@@ -32,6 +33,16 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<ApplicationDbContext>());
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+
+        // OCR Service configuration & HttpClient
+        services.Configure<OcrSettings>(configuration.GetSection("OcrService"));
+        var ocrSettings = configuration.GetSection("OcrService").Get<OcrSettings>() ?? new OcrSettings();
+
+        services.AddHttpClient<IOcrService, OcrService>(client =>
+        {
+            client.BaseAddress = new Uri(ocrSettings.BaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(ocrSettings.TimeoutSeconds);
+        });
 
         return services;
     }

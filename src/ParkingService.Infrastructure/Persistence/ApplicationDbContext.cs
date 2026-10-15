@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ParkingService.Application.Common.Interfaces;
+using ParkingService.Domain.Entities;
 
 namespace ParkingService.Infrastructure.Persistence;
 
@@ -9,6 +10,9 @@ public class ApplicationDbContext : DbContext, IUnitOfWork
         : base(options)
     {
     }
+
+    public DbSet<User> Users => Set<User>();
+    public DbSet<Card> Cards => Set<Card>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
