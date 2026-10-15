@@ -43,7 +43,7 @@ public class CreateUserCommandValidatorTests
 
     [Theory]
     [InlineData("not-an-email")]
-    [InlineData("missing@domain")]
+    [InlineData("missing-at-sign.com")]
     [InlineData("@nodomain.com")]
     public void Validate_WhenEmailIsInvalidFormat_ShouldHaveValidationError(string invalidEmail)
     {
