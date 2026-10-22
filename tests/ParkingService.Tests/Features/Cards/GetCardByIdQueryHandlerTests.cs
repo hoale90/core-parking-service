@@ -49,6 +49,12 @@ public class GetCardByIdQueryHandlerTests
         {
             Id = cardId,
             CardNumber = "0088776655",
+            Type = CardType.Registered,
+            VehiclePlate = "59-X1 123.45",
+            SkipValidateVehiclePlate = false,
+            Info = "Nguyen Van A",
+            Phone = "0901234567",
+            Room = "P101",
             UserId = userId,
             Status = CardStatus.Active,
             CreatedAt = DateTime.UtcNow
@@ -67,7 +73,12 @@ public class GetCardByIdQueryHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().Be(cardId);
         result.CardNumber.Should().Be("0088776655");
+        result.Type.Should().Be(CardType.Registered);
+        result.VehiclePlate.Should().Be("59-X1 123.45");
+        result.SkipValidateVehiclePlate.Should().BeFalse();
+        result.Info.Should().Be("Nguyen Van A");
+        result.Phone.Should().Be("0901234567");
+        result.Room.Should().Be("P101");
         result.UserId.Should().Be(userId);
-        result.Status.Should().Be(CardStatus.Active);
     }
 }

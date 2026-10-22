@@ -16,6 +16,17 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(u => u.Username)
+            .HasMaxLength(100);
+
+        builder.Property(u => u.RoleId);
+
+        builder.Property(u => u.Role)
+            .HasMaxLength(50);
+
+        builder.Property(u => u.Room)
+            .HasMaxLength(50);
+
         builder.Property(u => u.DateOfBirth);
 
         builder.Property(u => u.Gender)

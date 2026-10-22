@@ -27,6 +27,12 @@ public class GetCardByIdQueryHandler : IRequestHandler<GetCardByIdQuery, CardDto
         {
             Id = card.Id,
             CardNumber = card.CardNumber,
+            Type = card.Type,
+            VehiclePlate = card.VehiclePlate,
+            SkipValidateVehiclePlate = card.SkipValidateVehiclePlate,
+            Info = card.Info,
+            Phone = card.Phone,
+            Room = card.Room,
             UserId = card.UserId,
             Status = card.Status,
             CreatedAt = card.CreatedAt,

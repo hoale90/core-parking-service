@@ -10,6 +10,23 @@ public class CreateUserCommandValidator : AbstractValidator<CreateUserCommand>
             .NotEmpty().WithMessage("Họ và tên không được để trống.")
             .MaximumLength(200).WithMessage("Họ và tên không được vượt quá 200 ký tự.");
 
+        RuleFor(x => x.Username)
+            .MaximumLength(100).WithMessage("Tên tài khoản không được vượt quá 100 ký tự.")
+            .Matches(@"^[a-zA-Z0-9_.\-]+$").WithMessage("Tên tài khoản chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch nối.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Username));
+
+        RuleFor(x => x.RoleId)
+            .GreaterThan(0).WithMessage("RoleId phải lớn hơn 0.")
+            .When(x => x.RoleId.HasValue);
+
+        RuleFor(x => x.Role)
+            .MaximumLength(50).WithMessage("Tên vai trò không được vượt quá 50 ký tự.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Role));
+
+        RuleFor(x => x.Room)
+            .MaximumLength(50).WithMessage("Số phòng không được vượt quá 50 ký tự.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Room));
+
         RuleFor(x => x.Email)
             .EmailAddress().WithMessage("Địa chỉ email không đúng định dạng.")
             .MaximumLength(150).WithMessage("Email không được vượt quá 150 ký tự.")

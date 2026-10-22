@@ -35,7 +35,24 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(100)
                     .HasColumnType("TEXT");
 
+                b.Property<string>("Info")
+                    .HasMaxLength(250)
+                    .HasColumnType("TEXT");
+
                 b.Property<bool>("IsDeleted")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasDefaultValue(false);
+
+                b.Property<string>("Phone")
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Room")
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<bool>("SkipValidateVehiclePlate")
                     .ValueGeneratedOnAdd()
                     .HasColumnType("INTEGER")
                     .HasDefaultValue(false);
@@ -45,6 +62,13 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
+                b.Property<string>("Type")
+                    .IsRequired()
+                    .ValueGeneratedOnAdd()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue("Registered");
+
                 b.Property<DateTime?>("UpdatedAt")
                     .HasColumnType("TEXT");
 
@@ -53,6 +77,10 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("TEXT");
 
                 b.Property<Guid?>("UserId")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("VehiclePlate")
+                    .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
                 b.HasKey("Id");
@@ -107,6 +135,17 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
+                b.Property<string>("Role")
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<int?>("RoleId")
+                    .HasColumnType("INTEGER");
+
+                b.Property<string>("Room")
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
                 b.Property<string>("Status")
                     .IsRequired()
                     .HasMaxLength(20)
@@ -116,6 +155,10 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("TEXT");
 
                 b.Property<string>("UpdatedBy")
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Username")
                     .HasMaxLength(100)
                     .HasColumnType("TEXT");
 

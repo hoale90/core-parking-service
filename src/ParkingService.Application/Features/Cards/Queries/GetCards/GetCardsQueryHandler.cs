@@ -24,7 +24,15 @@ public class GetCardsQueryHandler : IRequestHandler<GetCardsQuery, PaginatedResu
         Expression<Func<Card, bool>> predicate = c =>
             (!request.UserId.HasValue || c.UserId == request.UserId.Value) &&
             (!request.Status.HasValue || c.Status == request.Status.Value) &&
-            (string.IsNullOrWhiteSpace(request.SearchTerm) || c.CardNumber.Contains(request.SearchTerm));
+            (!request.Type.HasValue || c.Type == request.Type.Value) &&
+            (string.IsNullOrWhiteSpace(request.Room) || c.Room == request.Room) &&
+            (string.IsNullOrWhiteSpace(request.VehiclePlate) || (c.VehiclePlate != null && c.VehiclePlate.Contains(request.VehiclePlate))) &&
+            (string.IsNullOrWhiteSpace(request.SearchTerm) ||
+             c.CardNumber.Contains(request.SearchTerm) ||
+             (c.VehiclePlate != null && c.VehiclePlate.Contains(request.SearchTerm)) ||
+             (c.Info != null && c.Info.Contains(request.SearchTerm)) ||
+             (c.Phone != null && c.Phone.Contains(request.SearchTerm)) ||
+             (c.Room != null && c.Room.Contains(request.SearchTerm)));
 
         var pagedCards = await _cardRepository.GetPagedAsync(
             pageNumber,
@@ -39,6 +47,12 @@ public class GetCardsQueryHandler : IRequestHandler<GetCardsQuery, PaginatedResu
             {
                 Id = c.Id,
                 CardNumber = c.CardNumber,
+                Type = c.Type,
+                VehiclePlate = c.VehiclePlate,
+                SkipValidateVehiclePlate = c.SkipValidateVehiclePlate,
+                Info = c.Info,
+                Phone = c.Phone,
+                Room = c.Room,
                 UserId = c.UserId,
                 Status = c.Status,
                 CreatedAt = c.CreatedAt,

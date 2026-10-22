@@ -27,6 +27,10 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
         {
             Id = Guid.NewGuid(),
             FullName = request.FullName.Trim(),
+            Username = request.Username?.Trim(),
+            RoleId = request.RoleId,
+            Role = request.Role?.Trim(),
+            Room = request.Room?.Trim(),
             DateOfBirth = request.DateOfBirth.HasValue
                 ? DateTime.SpecifyKind(request.DateOfBirth.Value, DateTimeKind.Utc)
                 : null,
@@ -46,6 +50,10 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
         {
             Id = user.Id,
             FullName = user.FullName,
+            Username = user.Username,
+            RoleId = user.RoleId,
+            Role = user.Role,
+            Room = user.Room,
             DateOfBirth = user.DateOfBirth,
             Gender = user.Gender,
             Phone = user.Phone,

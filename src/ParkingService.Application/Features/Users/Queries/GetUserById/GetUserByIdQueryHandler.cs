@@ -27,6 +27,10 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDto
         {
             Id = user.Id,
             FullName = user.FullName,
+            Username = user.Username,
+            RoleId = user.RoleId,
+            Role = user.Role,
+            Room = user.Room,
             DateOfBirth = user.DateOfBirth,
             Gender = user.Gender,
             Phone = user.Phone,

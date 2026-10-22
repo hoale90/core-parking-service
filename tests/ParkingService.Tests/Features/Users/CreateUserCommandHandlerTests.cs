@@ -42,6 +42,10 @@ public class CreateUserCommandHandlerTests
 
         var command = new CreateUserCommand(
             FullName: "Nguyễn Văn An",
+            Username: "anquocphong",
+            RoleId: 1,
+            Role: "technical-admin",
+            Room: "A16",
             DateOfBirth: new DateTime(1995, 8, 20, 0, 0, 0, DateTimeKind.Utc),
             Gender: "Nam",
             Phone: "0901234567",
@@ -56,6 +60,10 @@ public class CreateUserCommandHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().NotBeEmpty();
         result.FullName.Should().Be("Nguyễn Văn An");
+        result.Username.Should().Be("anquocphong");
+        result.RoleId.Should().Be(1);
+        result.Role.Should().Be("technical-admin");
+        result.Room.Should().Be("A16");
         result.Email.Should().Be("an.nguyen@gmail.com"); // normalized to lowercase
         result.PlateNumber.Should().Be("59-X1 123.45"); // normalized to uppercase
         result.Phone.Should().Be("0901234567");
@@ -66,6 +74,10 @@ public class CreateUserCommandHandlerTests
         // Assert - Entity persisted via repository
         capturedUser.Should().NotBeNull();
         capturedUser!.FullName.Should().Be("Nguyễn Văn An");
+        capturedUser.Username.Should().Be("anquocphong");
+        capturedUser.RoleId.Should().Be(1);
+        capturedUser.Role.Should().Be("technical-admin");
+        capturedUser.Room.Should().Be("A16");
         capturedUser.Email.Should().Be("an.nguyen@gmail.com");
         capturedUser.PlateNumber.Should().Be("59-X1 123.45");
         capturedUser.CreatedAt.Should().Be(fixedTime);

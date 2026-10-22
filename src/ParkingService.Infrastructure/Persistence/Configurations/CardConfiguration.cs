@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ParkingService.Domain.Entities;
+using ParkingService.Domain.Enums;
 
 namespace ParkingService.Infrastructure.Persistence.Configurations;
 
@@ -19,6 +20,29 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
         // Unique index for CardNumber
         builder.HasIndex(c => c.CardNumber)
             .IsUnique();
+
+        builder.Property(c => c.Type)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(CardType.Registered)
+            .HasSentinel((CardType)0)
+            .IsRequired();
+
+        builder.Property(c => c.VehiclePlate)
+            .HasMaxLength(20);
+
+        builder.Property(c => c.SkipValidateVehiclePlate)
+            .HasDefaultValue(false)
+            .IsRequired();
+
+        builder.Property(c => c.Info)
+            .HasMaxLength(250);
+
+        builder.Property(c => c.Phone)
+            .HasMaxLength(20);
+
+        builder.Property(c => c.Room)
+            .HasMaxLength(50);
 
         builder.Property(c => c.Status)
             .HasConversion<string>()

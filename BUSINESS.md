@@ -2,23 +2,45 @@
 
 > **Dự án**: Core Parking Service (Hệ thống quản lý bãi đỗ xe thông minh)  
 > **Nền tảng**: C# / .NET 8, ASP.NET Core Web API, SQLite with EF Core 8  
-> **Cập nhật lần cuối**: 2026-10-15  
-> **Trạng thái**: ✅ Giai đoạn 1 (Phase 1) hoàn thành: User, Card, SQLite Migration & OCR Integration
+> **Cập nhật lần cuối**: 2026-10-22  
+> **Trạng thái**: ✅ Giai đoạn 1 (Phase 1) hoàn thành: User & Card tương thích chuẩn `data.sql`, SQLite Migration, OCR Integration
 
 ---
 
 ## 1. 🎯 Tổng Quan & Phạm Vi Giai Đoạn 1 (Phase 1 Scope)
 
-Theo tài liệu [parking_management_requirements.md](file:///D:/Projects/parking-manager/parking-service/core-parking-service/parking_management_requirements.md), giai đoạn 1 tập trung triển khai:
+Theo tài liệu [parking_management_requirements.md](file:///D:/Projects/parking-manager/parking-service/core-parking-service/parking_management_requirements.md) và cấu trúc chuẩn từ `data.sql`:
 1. **Kết nối Database**: SQLite với EF Core 8, tự động chạy migration khi khởi động ứng dụng.
 2. **Cấu hình OCR Service**: Tích hợp với Python OCR Service qua HTTP Client (`/health`, `/ocr`).
 3. **Quản lý Người dùng (User Management)**:
-   - Entity `User`: `Id`, `FullName`, `DateOfBirth`, `Gender`, `Phone`, `Email`, `PlateNumber`, `Status` (Active, Disabled), `CreatedAt`, `UpdatedAt`.
+   - Entity `User`:
+     - `Id`: Khóa chính Guid
+     - `FullName`: Họ và tên đầy đủ
+     - `Username`: Tên tài khoản người dùng/nhân viên (từ `data.sql`)
+     - `RoleId`: ID vai trò hệ thống (1: technical-admin, 3: admin, 4: staff - từ `data.sql`)
+     - `Role`: Tên vai trò hiển thị
+     - `Room`: Số phòng / căn hộ cư dân (ví dụ: "B22", "A16")
+     - `DateOfBirth`: Ngày sinh (UTC)
+     - `Gender`: Giới tính
+     - `Phone`: Số điện thoại liên hệ
+     - `Email`: Địa chỉ email
+     - `PlateNumber`: Số xe / Biển số xe đăng ký
+     - `Status`: `Active` (1) hoặc `Disabled` (2)
+     - `CreatedAt`, `UpdatedAt`, `IsDeleted`
 4. **Quản lý Thẻ gửi xe (Card Management)**:
-   - Entity `Card`: `Id`, `CardNumber` (unique), `UserId` (nullable), `Status` (Active, Blocked, Lost), `CreatedAt`, `UpdatedAt`.
-   - `Card.UserId` cho phép `NULL` (hỗ trợ thẻ chưa gán người dùng hoặc thẻ khách).
-   - Ràng buộc: `CardNumber` duy nhất (không cho phép 2 thẻ trùng số); không cho gán thẻ vào `UserId` không tồn tại.
-5. **Chuẩn hóa API Response**: Mọi endpoint trả về định dạng `{ success, data, error }`.
+   - Entity `Card`:
+     - `Id`: Khóa chính Guid
+     - `CardNumber`: Mã số in hoặc đọc từ thẻ (tương thích `uuid` trong `data.sql`, unique index)
+     - `Type`: Loại thẻ (`Registered` = 1, `Temporary` = 2, `Unknown` = 3 - từ `data.sql`)
+     - `VehiclePlate`: Biển số xe gắn với thẻ (ví dụ: "38B1-28228", "94L1-05580" - từ `data.sql`)
+     - `SkipValidateVehiclePlate`: Cờ bỏ qua đối chiếu biển số khi ra/vào (từ `data.sql`)
+     - `Info`: Thông tin chủ thẻ / ghi chú (từ `data.sql`)
+     - `Phone`: Số điện thoại liên hệ của chủ thẻ (từ `data.sql`)
+     - `Room`: Số phòng / căn hộ của chủ thẻ (từ `data.sql`)
+     - `UserId`: ID người dùng (nullable - hỗ trợ thẻ khách hoặc chưa gán người dùng)
+     - `Status`: Trạng thái thẻ (`Active` = 1, `Blocked` = 2, `Lost` = 3)
+     - `CreatedAt`, `UpdatedAt`, `IsDeleted`
+5. **Chuẩn hóa API Response**: Mọi endpoint trả về định dạng chuẩn `{ success, data, error }`.
 
 ---
 
@@ -44,7 +66,10 @@ Khi ứng dụng khởi động trong `Program.cs`, DbContext tự động gọi
 ```csharp
 context.Database.Migrate();
 ```
-Tập tin migration ban đầu: `20261015070000_InitialCreate.cs` sẽ tự động tạo bảng `Users`, `Cards`, các khóa ngoại và chỉ mục duy nhất `IX_Cards_CardNumber`.
+Các migration:
+- `20261015070000_InitialCreate.cs`: Khởi tạo bảng `Users`, `Cards`.
+- `20261015083000_AddPlateNumberToUsers.cs`: Thêm trường `PlateNumber` vào `Users`.
+- `20261022110000_AddDataSqlFieldsToUserAndCard.cs`: Bổ sung các trường chuẩn từ `data.sql` vào `Cards` (`Type`, `VehiclePlate`, `SkipValidateVehiclePlate`, `Info`, `Phone`, `Room`) và `Users` (`Username`, `RoleId`, `Role`, `Room`).
 
 ---
 
@@ -62,10 +87,10 @@ dotnet restore
 # 2. Build toàn bộ solution
 dotnet build
 
-# 3. Chạy toàn bộ bộ test thực tế (Unit & Contract Tests)
+# 3. Chạy toàn bộ bộ test thực tế (52 test cases passed)
 dotnet test
 
-# 4. Khởi chạy Web API (tự động tạo database SQLite)
+# 4. Khởi chạy Web API (tự động tạo và cập nhật database SQLite)
 dotnet run --project src/ParkingService.Api
 ```
 
@@ -86,6 +111,10 @@ Content-Type: application/json
 
 {
   "fullName": "Nguyễn Văn Nam",
+  "username": "nam.nguyen",
+  "roleId": 3,
+  "role": "admin",
+  "room": "B22",
   "dateOfBirth": "1992-06-15T00:00:00Z",
   "gender": "Nam",
   "phone": "0912345678",
@@ -102,38 +131,26 @@ Content-Type: application/json
   "data": {
     "id": "e4b6c3f1-2852-4e94-82a1-63cb535a0921",
     "fullName": "Nguyễn Văn Nam",
+    "username": "nam.nguyen",
+    "roleId": 3,
+    "role": "admin",
+    "room": "B22",
     "dateOfBirth": "1992-06-15T00:00:00Z",
     "gender": "Nam",
     "phone": "0912345678",
     "email": "nam.nguyen@example.com",
     "plateNumber": "59-X1 123.45",
     "status": 1,
-    "createdAt": "2026-10-15T14:15:30.1234567Z",
+    "createdAt": "2026-10-22T10:15:30.1234567Z",
     "updatedAt": null
   },
   "error": null
 }
 ```
 
-#### Response Lỗi Validation (HTTP 400 Bad Request):
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "One or more validation errors occurred.",
-    "details": {
-      "FullName": ["Họ và tên không được để trống."],
-      "Email": ["Địa chỉ email không đúng định dạng."]
-    }
-  }
-}
-```
-
 ---
 
-### 4.2. `GET /api/users` — Danh Sách Người Dùng (Phân Trang)
+### 4.2. `GET /api/users` — Danh Sách Người Dùng (Phân Trang & Lọc)
 
 #### Request:
 ```http
@@ -149,12 +166,17 @@ GET /api/users?pageNumber=1&pageSize=10&searchTerm=Nam
       {
         "id": "e4b6c3f1-2852-4e94-82a1-63cb535a0921",
         "fullName": "Nguyễn Văn Nam",
+        "username": "nam.nguyen",
+        "roleId": 3,
+        "role": "admin",
+        "room": "B22",
         "dateOfBirth": "1992-06-15T00:00:00Z",
         "gender": "Nam",
         "phone": "0912345678",
         "email": "nam.nguyen@example.com",
+        "plateNumber": "59-X1 123.45",
         "status": 1,
-        "createdAt": "2026-10-15T14:15:30.1234567Z",
+        "createdAt": "2026-10-22T10:15:30.1234567Z",
         "updatedAt": null
       }
     ],
@@ -185,28 +207,20 @@ GET /api/users/e4b6c3f1-2852-4e94-82a1-63cb535a0921
   "data": {
     "id": "e4b6c3f1-2852-4e94-82a1-63cb535a0921",
     "fullName": "Nguyễn Văn Nam",
+    "username": "nam.nguyen",
+    "roleId": 3,
+    "role": "admin",
+    "room": "B22",
     "dateOfBirth": "1992-06-15T00:00:00Z",
     "gender": "Nam",
     "phone": "0912345678",
     "email": "nam.nguyen@example.com",
+    "plateNumber": "59-X1 123.45",
     "status": 1,
-    "createdAt": "2026-10-15T14:15:30.1234567Z",
+    "createdAt": "2026-10-22T10:15:30.1234567Z",
     "updatedAt": null
   },
   "error": null
-}
-```
-
-#### Response Không Tìm Thấy (HTTP 404 Not Found):
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Entity \"User\" (e4b6c3f1-2852-4e94-82a1-63cb535a0921) was not found.",
-    "details": null
-  }
 }
 ```
 
@@ -214,13 +228,19 @@ GET /api/users/e4b6c3f1-2852-4e94-82a1-63cb535a0921
 
 ### 4.4. `POST /api/cards` — Thêm Thẻ Gửi Xe
 
-#### Request (Thẻ chưa gán người dùng - `userId = null`):
+#### Request (Thẻ đăng ký căn hộ/nhà trọ theo chuẩn `data.sql`):
 ```http
 POST /api/cards
 Content-Type: application/json
 
 {
-  "cardNumber": "0012345678",
+  "cardNumber": "2848255313",
+  "type": 1,
+  "vehiclePlate": "94L1-05580",
+  "skipValidateVehiclePlate": false,
+  "info": "DUONG THI PHUNG",
+  "phone": "0912345678",
+  "room": "B22",
   "userId": null,
   "status": 1
 }
@@ -232,10 +252,16 @@ Content-Type: application/json
   "success": true,
   "data": {
     "id": "a1d7f8e2-4567-4a12-9c34-88aa11bb22cc",
-    "cardNumber": "0012345678",
+    "cardNumber": "2848255313",
+    "type": 1,
+    "vehiclePlate": "94L1-05580",
+    "skipValidateVehiclePlate": false,
+    "info": "DUONG THI PHUNG",
+    "phone": "0912345678",
+    "room": "B22",
     "userId": null,
     "status": 1,
-    "createdAt": "2026-10-15T14:20:00.0000000Z",
+    "createdAt": "2026-10-22T10:20:00.0000000Z",
     "updatedAt": null
   },
   "error": null
@@ -249,20 +275,7 @@ Content-Type: application/json
   "data": null,
   "error": {
     "code": "CONFLICT",
-    "message": "Card with CardNumber '0012345678' already exists.",
-    "details": null
-  }
-}
-```
-
-#### Response Lỗi Gán Cho `UserId` Không Tồn Tại (HTTP 404 Not Found):
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "NOT_FOUND",
-    "message": "Entity \"User\" (00000000-0000-0000-0000-000000000000) was not found.",
+    "message": "Card with CardNumber '2848255313' already exists.",
     "details": null
   }
 }
@@ -274,7 +287,7 @@ Content-Type: application/json
 
 #### Request:
 ```http
-GET /api/cards?pageNumber=1&pageSize=10&status=1
+GET /api/cards?pageNumber=1&pageSize=10&room=B22
 ```
 
 #### Response (HTTP 200 OK):
@@ -285,10 +298,16 @@ GET /api/cards?pageNumber=1&pageSize=10&status=1
     "items": [
       {
         "id": "a1d7f8e2-4567-4a12-9c34-88aa11bb22cc",
-        "cardNumber": "0012345678",
+        "cardNumber": "2848255313",
+        "type": 1,
+        "vehiclePlate": "94L1-05580",
+        "skipValidateVehiclePlate": false,
+        "info": "DUONG THI PHUNG",
+        "phone": "0912345678",
+        "room": "B22",
         "userId": null,
         "status": 1,
-        "createdAt": "2026-10-15T14:20:00.0000000Z",
+        "createdAt": "2026-10-22T10:20:00.0000000Z",
         "updatedAt": null
       }
     ],
@@ -318,10 +337,16 @@ GET /api/cards/a1d7f8e2-4567-4a12-9c34-88aa11bb22cc
   "success": true,
   "data": {
     "id": "a1d7f8e2-4567-4a12-9c34-88aa11bb22cc",
-    "cardNumber": "0012345678",
+    "cardNumber": "2848255313",
+    "type": 1,
+    "vehiclePlate": "94L1-05580",
+    "skipValidateVehiclePlate": false,
+    "info": "DUONG THI PHUNG",
+    "phone": "0912345678",
+    "room": "B22",
     "userId": null,
     "status": 1,
-    "createdAt": "2026-10-15T14:20:00.0000000Z",
+    "createdAt": "2026-10-22T10:20:00.0000000Z",
     "updatedAt": null
   },
   "error": null

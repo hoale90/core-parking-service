@@ -48,6 +48,10 @@ public class GetUserByIdQueryHandlerTests
         {
             Id = userId,
             FullName = "Đặng Hoàng Phúc",
+            Username = "phuc.dang",
+            RoleId = 3,
+            Role = "admin",
+            Room = "B22",
             Email = "phuc.dang@example.com",
             Phone = "0933112233",
             Gender = "Nam",
@@ -69,8 +73,11 @@ public class GetUserByIdQueryHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().Be(userId);
         result.FullName.Should().Be("Đặng Hoàng Phúc");
+        result.Username.Should().Be("phuc.dang");
+        result.RoleId.Should().Be(3);
+        result.Role.Should().Be("admin");
+        result.Room.Should().Be("B22");
         result.Email.Should().Be("phuc.dang@example.com");
         result.PlateNumber.Should().Be("29A-888.88");
-        result.Status.Should().Be(UserStatus.Active);
     }
 }

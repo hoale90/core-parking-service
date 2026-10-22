@@ -115,6 +115,7 @@ public class CreateCardCommandHandlerTests
         result.CardNumber.Should().Be(cardNumber);
         result.UserId.Should().BeNull();
         result.Status.Should().Be(CardStatus.Active);
+        result.Type.Should().Be(CardType.Registered);
         result.CreatedAt.Should().Be(fixedTime);
 
         savedCard.Should().NotBeNull();
@@ -163,6 +164,57 @@ public class CreateCardCommandHandlerTests
 
         savedCard.Should().NotBeNull();
         savedCard!.UserId.Should().Be(validUserId);
+
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenDataSqlFieldsAreProvided_ShouldPersistAllFieldsAccurately()
+    {
+        // Arrange - Realistic boarding house / apartment card creation from data.sql
+        const string cardNumber = "2848255313";
+        const string plateNumber = "94l1-05580";
+        var fixedTime = new DateTime(2026, 10, 22, 10, 0, 0, DateTimeKind.Utc);
+        _dateTimeProviderMock.Setup(p => p.UtcNow).Returns(fixedTime);
+
+        _cardRepositoryMock
+            .Setup(r => r.AnyAsync(It.IsAny<Expression<Func<Card, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        Card? savedCard = null;
+        _cardRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<Card>(), It.IsAny<CancellationToken>()))
+            .Callback<Card, CancellationToken>((c, _) => savedCard = c)
+            .ReturnsAsync((Card c, CancellationToken _) => c);
+
+        var command = new CreateCardCommand(
+            CardNumber: cardNumber,
+            Type: CardType.Registered,
+            VehiclePlate: plateNumber,
+            SkipValidateVehiclePlate: false,
+            Info: "DUONG THI PHUNG",
+            Phone: "0912345678",
+            Room: "B22",
+            Status: CardStatus.Active);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.CardNumber.Should().Be(cardNumber);
+        result.Type.Should().Be(CardType.Registered);
+        result.VehiclePlate.Should().Be("94L1-05580"); // normalized to uppercase
+        result.SkipValidateVehiclePlate.Should().BeFalse();
+        result.Info.Should().Be("DUONG THI PHUNG");
+        result.Phone.Should().Be("0912345678");
+        result.Room.Should().Be("B22");
+
+        savedCard.Should().NotBeNull();
+        savedCard!.VehiclePlate.Should().Be("94L1-05580");
+        savedCard.Room.Should().Be("B22");
+        savedCard.Info.Should().Be("DUONG THI PHUNG");
+        savedCard.Phone.Should().Be("0912345678");
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
