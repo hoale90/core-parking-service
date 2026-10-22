@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using ParkingService.Application.Common.Models;
+using ParkingService.Application.Features.Cards.Commands.AssignUserToCard;
 using ParkingService.Application.Features.Cards.Commands.CreateCard;
 using ParkingService.Application.Features.Cards.DTOs;
 using ParkingService.Application.Features.Cards.Queries.GetCardById;
 using ParkingService.Application.Features.Cards.Queries.GetCards;
 
 namespace ParkingService.Api.Controllers;
+
+public record AssignUserRequest(Guid? UserId);
 
 /// <summary>
 /// Controller for managing RFID/Mifare access cards.
@@ -42,7 +45,7 @@ public class CardsController : BaseApiController
     }
 
     /// <summary>
-    /// Lấy thông tin chi tiết một thẻ theo Id.
+    /// Lấy thông tin chi tiết một thẻ theo Id (bao gồm số xe của người dùng để kiểm thử).
     /// </summary>
     /// <param name="id">Id của thẻ (Guid)</param>
     /// <returns>Thông tin chi tiết thẻ</returns>
@@ -52,6 +55,23 @@ public class CardsController : BaseApiController
     public async Task<IActionResult> GetById([FromRoute] Guid id)
     {
         var result = await Mediator.Send(new GetCardByIdQuery(id));
+        return OkResponse(result);
+    }
+
+    /// <summary>
+    /// Liên kết thẻ với người dùng (1 User - 1 Thẻ) hoặc hủy liên kết (truyền userId = null).
+    /// </summary>
+    /// <param name="id">Id của thẻ</param>
+    /// <param name="request">Chứa UserId cần liên kết</param>
+    /// <returns>Thông tin thẻ sau khi liên kết</returns>
+    [HttpPut("{id:guid}/assign-user")]
+    [ProducesResponseType(typeof(ApiResponse<CardDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AssignUser([FromRoute] Guid id, [FromBody] AssignUserRequest request)
+    {
+        var result = await Mediator.Send(new AssignUserToCardCommand(id, request.UserId));
         return OkResponse(result);
     }
 }

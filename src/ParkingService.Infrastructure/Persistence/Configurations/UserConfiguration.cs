@@ -16,22 +16,6 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(200);
 
-        builder.Property(u => u.Username)
-            .HasMaxLength(100);
-
-        builder.Property(u => u.RoleId);
-
-        builder.Property(u => u.Role)
-            .HasMaxLength(50);
-
-        builder.Property(u => u.Room)
-            .HasMaxLength(50);
-
-        builder.Property(u => u.DateOfBirth);
-
-        builder.Property(u => u.Gender)
-            .HasMaxLength(20);
-
         builder.Property(u => u.Phone)
             .HasMaxLength(20);
 
@@ -39,6 +23,16 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .HasMaxLength(150);
 
         builder.Property(u => u.PlateNumber)
+            .HasMaxLength(20);
+
+        builder.HasIndex(u => u.PlateNumber);
+
+        builder.Property(u => u.Room)
+            .HasMaxLength(50);
+
+        builder.Property(u => u.DateOfBirth);
+
+        builder.Property(u => u.Gender)
             .HasMaxLength(20);
 
         builder.Property(u => u.Status)

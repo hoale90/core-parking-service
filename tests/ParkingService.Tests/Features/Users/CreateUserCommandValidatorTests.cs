@@ -42,41 +42,6 @@ public class CreateUserCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("user name with spaces")]
-    [InlineData("user@admin")]
-    [InlineData("user#name")]
-    public void Validate_WhenUsernameContainsInvalidCharacters_ShouldHaveValidationError(string invalidUsername)
-    {
-        // Arrange
-        var command = new CreateUserCommand(
-            FullName: "Nguyễn Văn A",
-            Username: invalidUsername);
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.Username)
-            .WithErrorMessage("Tên tài khoản chỉ được chứa chữ cái, số, dấu chấm, gạch dưới và gạch nối.");
-    }
-
-    [Fact]
-    public void Validate_WhenRoleIdIsZeroOrNegative_ShouldHaveValidationError()
-    {
-        // Arrange
-        var command = new CreateUserCommand(
-            FullName: "Nguyễn Văn A",
-            RoleId: 0);
-
-        // Act
-        var result = _validator.TestValidate(command);
-
-        // Assert
-        result.ShouldHaveValidationErrorFor(x => x.RoleId)
-            .WithErrorMessage("RoleId phải lớn hơn 0.");
-    }
-
-    [Theory]
     [InlineData("not-an-email")]
     [InlineData("missing-at-sign.com")]
     [InlineData("@nodomain.com")]
@@ -166,15 +131,28 @@ public class CreateUserCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_WhenRoomExceeds50Characters_ShouldHaveValidationError()
+    {
+        // Arrange
+        var command = new CreateUserCommand(
+            FullName: "Nguyễn Văn An",
+            Room: new string('R', 51));
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.Room)
+            .WithErrorMessage("Số phòng không được vượt quá 50 ký tự.");
+    }
+
+    [Fact]
     public void Validate_WhenAllFieldsAreValid_ShouldNotHaveAnyValidationErrors()
     {
         // Arrange
         var command = new CreateUserCommand(
             FullName: "Nguyễn Văn Nam",
-            Username: "nam.nguyen",
-            RoleId: 3,
-            Role: "admin",
-            Room: "A102",
+            Room: "A16",
             DateOfBirth: new DateTime(1990, 5, 15, 0, 0, 0, DateTimeKind.Utc),
             Gender: "Nam",
             Phone: "0912345678",

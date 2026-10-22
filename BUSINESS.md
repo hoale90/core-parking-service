@@ -3,362 +3,101 @@
 > **Dự án**: Core Parking Service (Hệ thống quản lý bãi đỗ xe thông minh)  
 > **Nền tảng**: C# / .NET 8, ASP.NET Core Web API, SQLite with EF Core 8  
 > **Cập nhật lần cuối**: 2026-10-22  
-> **Trạng thái**: ✅ Giai đoạn 1 (Phase 1) hoàn thành: User & Card tương thích chuẩn `data.sql`, SQLite Migration, OCR Integration
+> **Trạng thái**: ✅ Hoàn thành thiết kế chuẩn hóa 2 bảng sạch (Users & Cards), liên kết 1 User - 1 Thẻ, tích hợp số xe phục vụ đối chiếu ra/vào.
 
 ---
 
-## 1. 🎯 Tổng Quan & Phạm Vi Giai Đoạn 1 (Phase 1 Scope)
+## 1. 🎯 Thiết Kế Kiến Trúc 2 Bảng Chuẩn Hóa (Không Dư Thừa)
 
-Theo tài liệu [parking_management_requirements.md](file:///D:/Projects/parking-manager/parking-service/core-parking-service/parking_management_requirements.md) và cấu trúc chuẩn từ `data.sql`:
-1. **Kết nối Database**: SQLite với EF Core 8, tự động chạy migration khi khởi động ứng dụng.
-2. **Cấu hình OCR Service**: Tích hợp với Python OCR Service qua HTTP Client (`/health`, `/ocr`).
-3. **Quản lý Người dùng (User Management)**:
-   - Entity `User`:
-     - `Id`: Khóa chính Guid
-     - `FullName`: Họ và tên đầy đủ
-     - `Username`: Tên tài khoản người dùng/nhân viên (từ `data.sql`)
-     - `RoleId`: ID vai trò hệ thống (1: technical-admin, 3: admin, 4: staff - từ `data.sql`)
-     - `Role`: Tên vai trò hiển thị
-     - `Room`: Số phòng / căn hộ cư dân (ví dụ: "B22", "A16")
-     - `DateOfBirth`: Ngày sinh (UTC)
-     - `Gender`: Giới tính
-     - `Phone`: Số điện thoại liên hệ
-     - `Email`: Địa chỉ email
-     - `PlateNumber`: Số xe / Biển số xe đăng ký
-     - `Status`: `Active` (1) hoặc `Disabled` (2)
-     - `CreatedAt`, `UpdatedAt`, `IsDeleted`
-4. **Quản lý Thẻ gửi xe (Card Management)**:
-   - Entity `Card`:
-     - `Id`: Khóa chính Guid
-     - `CardNumber`: Mã số in hoặc đọc từ thẻ (tương thích `uuid` trong `data.sql`, unique index)
-     - `Type`: Loại thẻ (`Registered` = 1, `Temporary` = 2, `Unknown` = 3 - từ `data.sql`)
-     - `VehiclePlate`: Biển số xe gắn với thẻ (ví dụ: "38B1-28228", "94L1-05580" - từ `data.sql`)
-     - `SkipValidateVehiclePlate`: Cờ bỏ qua đối chiếu biển số khi ra/vào (từ `data.sql`)
-     - `Info`: Thông tin chủ thẻ / ghi chú (từ `data.sql`)
-     - `Phone`: Số điện thoại liên hệ của chủ thẻ (từ `data.sql`)
-     - `Room`: Số phòng / căn hộ của chủ thẻ (từ `data.sql`)
-     - `UserId`: ID người dùng (nullable - hỗ trợ thẻ khách hoặc chưa gán người dùng)
-     - `Status`: Trạng thái thẻ (`Active` = 1, `Blocked` = 2, `Lost` = 3)
-     - `CreatedAt`, `UpdatedAt`, `IsDeleted`
-5. **Chuẩn hóa API Response**: Mọi endpoint trả về định dạng chuẩn `{ success, data, error }`.
+Hệ thống được thiết kế tách biệt rõ ràng giữa **Thông tin cá nhân/phương tiện của Người dùng** và **Thông tin Thẻ RFID**:
+
+```
+ ┌─────────────────────────────────────────┐            ┌─────────────────────────────────────────┐
+ │               Users                     │            │                 Cards                   │
+ ├─────────────────────────────────────────┤            ├─────────────────────────────────────────┤
+ │ Id (PK, Guid)                           │ 1        * │ Id (PK, Guid)                           │
+ │ FullName (string)                       │────────────│ CardNumber (string, Unique)             │
+ │ Phone (string?)                         │   UserId   │ UserId (FK -> Users.Id, Nullable)       │
+ │ Email (string?)                         │ (1-1 Rule) │ Type (Registered, Temporary, Unknown)   │
+ │ PlateNumber (string?, Indexed)          │            │ Status (Active, Blocked, Lost)          │
+ │ Room (string?, Số phòng/căn hộ)         │            │ CreatedAt (DateTime UTC)                │
+ │ DateOfBirth, Gender                     │            │ UpdatedAt (DateTime? UTC)               │
+ │ Status (Active = 1, Disabled = 2)       │            │ IsDeleted (bool, Soft Delete)           │
+ │ CreatedAt, UpdatedAt, IsDeleted         │            └─────────────────────────────────────────┘
+ └─────────────────────────────────────────┘
+```
+
+### 1.1. Bảng `Users` (Thông tin cá nhân & Số xe)
+- **Mục đích**: Lưu trữ thông tin định danh của người dùng/cư dân/chủ xe.
+- **Các trường**:
+  - `Id`: Khóa chính Guid
+  - `FullName`: Họ và tên (bắt buộc)
+  - `Phone`: Số điện thoại liên hệ
+  - `Email`: Địa chỉ email
+  - `PlateNumber`: **Số xe / Biển số xe đăng ký** (được đánh Index phục vụ tìm kiếm & đối chiếu cổng ra/vào)
+  - `Room`: Số phòng / căn hộ cư dân (ví dụ: `"A16"`, `"B22"`)
+  - `DateOfBirth`, `Gender`: Ngày sinh, giới tính
+  - `Status`: Trạng thái (`Active` = 1, `Disabled` = 2)
+  - `CreatedAt`, `UpdatedAt`, `IsDeleted`: Thời gian UTC & cờ soft-delete
+
+### 1.2. Bảng `Cards` (Thông tin thẻ RFID)
+- **Mục đích**: Quản lý danh sách thẻ chip RFID/Mifare, trạng thái thẻ và liên kết người dùng.
+- **Các trường**:
+  - `Id`: Khóa chính Guid
+  - `CardNumber`: Mã số in hoặc đọc từ thẻ (Unique Index)
+  - `UserId`: Khóa ngoại trỏ tới `Users.Id` (Nullable để hỗ trợ thẻ chưa gán hoặc thẻ khách vãng lai)
+  - `Type`: Phân loại thẻ (`Registered` = 1, `Temporary` = 2, `Unknown` = 3)
+  - `Status`: Trạng thái thẻ (`Active` = 1, `Blocked` = 2, `Lost` = 3)
+  - `CreatedAt`, `UpdatedAt`, `IsDeleted`: Thời gian UTC & cờ soft-delete
+- **Loại bỏ hoàn toàn các trường dư thừa**: Các trường như tên, số điện thoại, biển số xe, số phòng không lưu trực tiếp ở bảng `Cards` mà lấy từ `Users` qua quan hệ `UserId`.
 
 ---
 
-## 2. 🗄️ Cấu Hình Database & OCR Service
+## 2. 🚦 Quy Trình Kiểm Thử & Đối Chiếu Ra/Vào (Validation Logic)
 
-### 2.1. `appsettings.json`
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Data Source=parking_service.db"
-  },
-  "OcrService": {
-    "BaseUrl": "http://localhost:8000",
-    "HealthEndpoint": "/health",
-    "OcrEndpoint": "/ocr",
-    "TimeoutSeconds": 10
-  }
-}
-```
-
-### 2.2. Tự Động Migration Khi Khởi Chạy
-Khi ứng dụng khởi động trong `Program.cs`, DbContext tự động gọi:
-```csharp
-context.Database.Migrate();
-```
-Các migration:
-- `20261015070000_InitialCreate.cs`: Khởi tạo bảng `Users`, `Cards`.
-- `20261015083000_AddPlateNumberToUsers.cs`: Thêm trường `PlateNumber` vào `Users`.
-- `20261022110000_AddDataSqlFieldsToUserAndCard.cs`: Bổ sung các trường chuẩn từ `data.sql` vào `Cards` (`Type`, `VehiclePlate`, `SkipValidateVehiclePlate`, `Info`, `Phone`, `Room`) và `Users` (`Username`, `RoleId`, `Role`, `Room`).
+Khi phương tiện tới barrier quẹt thẻ:
+1. **Đầu vào**:
+   - `CardNumber`: Mã thẻ đọc từ đầu đọc thẻ USB
+   - `DetectedPlateNumber`: Biển số xe do OCR Service nhận diện từ camera RTSP
+2. **Luồng kiểm tra của Core Service**:
+   ```
+   Quẹt thẻ (CardNumber) ──▶ Tìm Card trong DB
+                               │
+                               ├── 1. Card == null hoặc IsDeleted? ────────────▶ TỪ CHỐI (DENIED)
+                               ├── 2. Card.Status != Active? (Bị khóa/mất) ────▶ TỪ CHỐI (DENIED)
+                               ├── 3. Card.UserId == null? (Thẻ chưa gán) ────▶ Xử lý thẻ vãng lai
+                               │
+                               ▼ Thẻ cư dân (Registered)
+                       Lấy User từ Card.UserId
+                               │
+                               ├── 4. User.Status != Active? (Vô hiệu hóa) ────▶ TỪ CHỐI (DENIED)
+                               ├── 5. User.PlateNumber != DetectedPlate? ─────▶ TỪ CHỐI (DENIED)
+                               │
+                               ▼
+                       CHẤP THUẬN (ALLOWED) ──▶ Gửi lệnh mở barrier
+   ```
 
 ---
 
-## 3. 🚀 Hướng Dẫn Chạy & Kiểm Thử Ứng Dụng
+## 3. 📡 Danh Sách API Chính
 
-### 3.1. Yêu Cầu Môi Trường
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
-- Python 3.10+ (nếu chạy OCR Service)
+### 3.1. Quản Lý Thẻ (Cards)
+- `POST /api/cards`: Thêm thẻ mới vào danh sách (chưa gán hoặc gán ngay `userId`).
+- `GET /api/cards`: Lấy danh sách thẻ (hỗ trợ phân trang, lọc theo `status`, `type`, `userId`, tìm kiếm `searchTerm`). Kết quả trả về kèm thông tin người dùng sở hữu (`userFullName`, `userPlateNumber`, `userRoom`, `userStatus`).
+- `GET /api/cards/{id}`: Lấy chi tiết thẻ kèm biển số xe người dùng.
+- `PUT /api/cards/{id}/assign-user`: **Liên kết thẻ với 1 User (quy tắc 1 User - 1 Thẻ)** hoặc hủy liên kết (`userId = null`).
 
-### 3.2. Lệnh Chạy
-```bash
-# 1. Restore các dependencies
-dotnet restore
-
-# 2. Build toàn bộ solution
-dotnet build
-
-# 3. Chạy toàn bộ bộ test thực tế (52 test cases passed)
-dotnet test
-
-# 4. Khởi chạy Web API (tự động tạo và cập nhật database SQLite)
-dotnet run --project src/ParkingService.Api
-```
-
-### 3.3. Truy Cập Swagger UI
-Sau khi khởi chạy ứng dụng, truy cập:
-`https://localhost:5001/swagger` hoặc `http://localhost:5000/swagger`
+### 3.2. Quản Lý Người Dùng (Users)
+- `POST /api/users`: Thêm người dùng mới (có sẵn `plateNumber`, `room`, `phone`, và tùy chọn gán ngay `cardId`).
+- `GET /api/users`: Lấy danh sách người dùng (hỗ trợ phân trang, lọc theo `status`, `room`, tìm kiếm theo tên, biển số, phòng, SĐT).
+- `GET /api/users/{id}`: Lấy chi tiết người dùng kèm mã thẻ đang liên kết (`linkedCardNumber`).
 
 ---
 
-## 4. 📡 Danh Sách API & Ví Dụ Request/Response
+## 4. 📊 Dữ Liệu Nạp Thực Tế (Từ `data.sql`)
 
-### 4.1. `POST /api/users` — Thêm Người Dùng
-
-#### Request:
-```http
-POST /api/users
-Content-Type: application/json
-
-{
-  "fullName": "Nguyễn Văn Nam",
-  "username": "nam.nguyen",
-  "roleId": 3,
-  "role": "admin",
-  "room": "B22",
-  "dateOfBirth": "1992-06-15T00:00:00Z",
-  "gender": "Nam",
-  "phone": "0912345678",
-  "email": "nam.nguyen@example.com",
-  "plateNumber": "59-X1 123.45",
-  "status": 1
-}
-```
-
-#### Response Thành Công (HTTP 201 Created):
-```json
-{
-  "success": true,
-  "data": {
-    "id": "e4b6c3f1-2852-4e94-82a1-63cb535a0921",
-    "fullName": "Nguyễn Văn Nam",
-    "username": "nam.nguyen",
-    "roleId": 3,
-    "role": "admin",
-    "room": "B22",
-    "dateOfBirth": "1992-06-15T00:00:00Z",
-    "gender": "Nam",
-    "phone": "0912345678",
-    "email": "nam.nguyen@example.com",
-    "plateNumber": "59-X1 123.45",
-    "status": 1,
-    "createdAt": "2026-10-22T10:15:30.1234567Z",
-    "updatedAt": null
-  },
-  "error": null
-}
-```
-
----
-
-### 4.2. `GET /api/users` — Danh Sách Người Dùng (Phân Trang & Lọc)
-
-#### Request:
-```http
-GET /api/users?pageNumber=1&pageSize=10&searchTerm=Nam
-```
-
-#### Response (HTTP 200 OK):
-```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "e4b6c3f1-2852-4e94-82a1-63cb535a0921",
-        "fullName": "Nguyễn Văn Nam",
-        "username": "nam.nguyen",
-        "roleId": 3,
-        "role": "admin",
-        "room": "B22",
-        "dateOfBirth": "1992-06-15T00:00:00Z",
-        "gender": "Nam",
-        "phone": "0912345678",
-        "email": "nam.nguyen@example.com",
-        "plateNumber": "59-X1 123.45",
-        "status": 1,
-        "createdAt": "2026-10-22T10:15:30.1234567Z",
-        "updatedAt": null
-      }
-    ],
-    "totalCount": 1,
-    "pageNumber": 1,
-    "pageSize": 10,
-    "totalPages": 1,
-    "hasPreviousPage": false,
-    "hasNextPage": false
-  },
-  "error": null
-}
-```
-
----
-
-### 4.3. `GET /api/users/{id}` — Chi Tiết Người Dùng
-
-#### Request:
-```http
-GET /api/users/e4b6c3f1-2852-4e94-82a1-63cb535a0921
-```
-
-#### Response Thành Công (HTTP 200 OK):
-```json
-{
-  "success": true,
-  "data": {
-    "id": "e4b6c3f1-2852-4e94-82a1-63cb535a0921",
-    "fullName": "Nguyễn Văn Nam",
-    "username": "nam.nguyen",
-    "roleId": 3,
-    "role": "admin",
-    "room": "B22",
-    "dateOfBirth": "1992-06-15T00:00:00Z",
-    "gender": "Nam",
-    "phone": "0912345678",
-    "email": "nam.nguyen@example.com",
-    "plateNumber": "59-X1 123.45",
-    "status": 1,
-    "createdAt": "2026-10-22T10:15:30.1234567Z",
-    "updatedAt": null
-  },
-  "error": null
-}
-```
-
----
-
-### 4.4. `POST /api/cards` — Thêm Thẻ Gửi Xe
-
-#### Request (Thẻ đăng ký căn hộ/nhà trọ theo chuẩn `data.sql`):
-```http
-POST /api/cards
-Content-Type: application/json
-
-{
-  "cardNumber": "2848255313",
-  "type": 1,
-  "vehiclePlate": "94L1-05580",
-  "skipValidateVehiclePlate": false,
-  "info": "DUONG THI PHUNG",
-  "phone": "0912345678",
-  "room": "B22",
-  "userId": null,
-  "status": 1
-}
-```
-
-#### Response Thành Công (HTTP 201 Created):
-```json
-{
-  "success": true,
-  "data": {
-    "id": "a1d7f8e2-4567-4a12-9c34-88aa11bb22cc",
-    "cardNumber": "2848255313",
-    "type": 1,
-    "vehiclePlate": "94L1-05580",
-    "skipValidateVehiclePlate": false,
-    "info": "DUONG THI PHUNG",
-    "phone": "0912345678",
-    "room": "B22",
-    "userId": null,
-    "status": 1,
-    "createdAt": "2026-10-22T10:20:00.0000000Z",
-    "updatedAt": null
-  },
-  "error": null
-}
-```
-
-#### Response Lỗi Trùng Mã Thẻ (HTTP 409 Conflict):
-```json
-{
-  "success": false,
-  "data": null,
-  "error": {
-    "code": "CONFLICT",
-    "message": "Card with CardNumber '2848255313' already exists.",
-    "details": null
-  }
-}
-```
-
----
-
-### 4.5. `GET /api/cards` — Danh Sách Thẻ (Phân Trang & Lọc)
-
-#### Request:
-```http
-GET /api/cards?pageNumber=1&pageSize=10&room=B22
-```
-
-#### Response (HTTP 200 OK):
-```json
-{
-  "success": true,
-  "data": {
-    "items": [
-      {
-        "id": "a1d7f8e2-4567-4a12-9c34-88aa11bb22cc",
-        "cardNumber": "2848255313",
-        "type": 1,
-        "vehiclePlate": "94L1-05580",
-        "skipValidateVehiclePlate": false,
-        "info": "DUONG THI PHUNG",
-        "phone": "0912345678",
-        "room": "B22",
-        "userId": null,
-        "status": 1,
-        "createdAt": "2026-10-22T10:20:00.0000000Z",
-        "updatedAt": null
-      }
-    ],
-    "totalCount": 1,
-    "pageNumber": 1,
-    "pageSize": 10,
-    "totalPages": 1,
-    "hasPreviousPage": false,
-    "hasNextPage": false
-  },
-  "error": null
-}
-```
-
----
-
-### 4.6. `GET /api/cards/{id}` — Chi Tiết Thẻ
-
-#### Request:
-```http
-GET /api/cards/a1d7f8e2-4567-4a12-9c34-88aa11bb22cc
-```
-
-#### Response (HTTP 200 OK):
-```json
-{
-  "success": true,
-  "data": {
-    "id": "a1d7f8e2-4567-4a12-9c34-88aa11bb22cc",
-    "cardNumber": "2848255313",
-    "type": 1,
-    "vehiclePlate": "94L1-05580",
-    "skipValidateVehiclePlate": false,
-    "info": "DUONG THI PHUNG",
-    "phone": "0912345678",
-    "room": "B22",
-    "userId": null,
-    "status": 1,
-    "createdAt": "2026-10-22T10:20:00.0000000Z",
-    "updatedAt": null
-  },
-  "error": null
-}
-```
-
----
-
-## 5. 🛑 Nguyên Tắc Không Tự Suy Diễn (Theo Requirements)
-
-1. **Không tự quyết định quyền vào/ra bằng OCR**: OCR chỉ đọc biển số, Core Service mới ra quyết định `Allowed` / `Denied`.
-2. **Thẻ chưa gán người dùng (`UserId = NULL`)**: Không mặc nhiên được tự động mở barrier.
-3. **Lệnh barrier**: Gửi lệnh thành công không đồng nghĩa phần cứng barrier đã mở.
-4. **Bảo mật**: Tuyệt đối không lưu mật khẩu hoặc cấu hình nhạy cảm dưới dạng plain-text.
-5. **Thời gian**: Thống nhất dùng UTC ISO 8601 trong toàn bộ database và API.
+Dữ liệu từ `data.sql` đã được import và chuẩn hóa sạch sẽ:
+- **Tổng số Users**: **91** (3 tài khoản hệ thống + 88 cư dân kèm số xe và số phòng).
+- **Tổng số Cards**: **530** (88 thẻ đã được liên kết 1-1 với User có số xe + 442 thẻ chưa gán / thẻ vãng lai).
+- **Tập tin cơ sở dữ liệu SQLite**: `src/ParkingService.Api/parking_service.db`.
+- **Script chuẩn hóa dữ liệu**: `python scripts/import_data.py`.

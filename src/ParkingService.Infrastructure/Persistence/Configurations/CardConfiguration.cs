@@ -28,25 +28,11 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
             .HasSentinel((CardType)0)
             .IsRequired();
 
-        builder.Property(c => c.VehiclePlate)
-            .HasMaxLength(20);
-
-        builder.Property(c => c.SkipValidateVehiclePlate)
-            .HasDefaultValue(false)
-            .IsRequired();
-
-        builder.Property(c => c.Info)
-            .HasMaxLength(250);
-
-        builder.Property(c => c.Phone)
-            .HasMaxLength(20);
-
-        builder.Property(c => c.Room)
-            .HasMaxLength(50);
-
         builder.Property(c => c.Status)
             .HasConversion<string>()
             .HasMaxLength(20)
+            .HasDefaultValue(CardStatus.Active)
+            .HasSentinel((CardStatus)0)
             .IsRequired();
 
         builder.Property(c => c.UserId)
@@ -66,11 +52,11 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
         builder.Property(c => c.IsDeleted)
             .HasDefaultValue(false);
 
-        // Relationship: One User has many Cards, Card optionally belongs to one User
+        // Relationship: One User can have Cards, Card optionally belongs to one User
         builder.HasOne(c => c.User)
             .WithMany(u => u.Cards)
             .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Restrict)
+            .OnDelete(DeleteBehavior.SetNull)
             .IsRequired(false);
 
         // Soft delete query filter

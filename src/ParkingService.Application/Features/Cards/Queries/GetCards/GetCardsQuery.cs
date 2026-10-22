@@ -11,7 +11,5 @@ public record GetCardsQuery(
     Guid? UserId = null,
     CardStatus? Status = null,
     CardType? Type = null,
-    string? Room = null,
-    string? VehiclePlate = null,
     string? SearchTerm = null
 ) : IRequest<PaginatedResult<CardDto>>;

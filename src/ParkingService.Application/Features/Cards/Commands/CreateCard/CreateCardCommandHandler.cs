@@ -39,13 +39,24 @@ public class CreateCardCommandHandler : IRequestHandler<CreateCardCommand, CardD
             throw new ConflictException("Card", "CardNumber", normalizedCardNumber);
         }
 
-        // 2. Nếu UserId có giá trị, kiểm tra người dùng đó có tồn tại trong hệ thống không
+        // 2. Nếu UserId có giá trị, kiểm tra người dùng đó có tồn tại không và đã có thẻ chưa
+        User? linkedUser = null;
         if (request.UserId.HasValue)
         {
-            var userExists = await _userRepository.ExistsAsync(request.UserId.Value, cancellationToken);
-            if (!userExists)
+            linkedUser = await _userRepository.GetByIdAsync(request.UserId.Value, cancellationToken);
+            if (linkedUser == null)
             {
                 throw new NotFoundException("User", request.UserId.Value);
+            }
+
+            // Quy tắc 1 User liên kết 1 Thẻ
+            var userAlreadyHasCard = await _cardRepository.AnyAsync(
+                c => c.UserId == request.UserId.Value,
+                cancellationToken);
+
+            if (userAlreadyHasCard)
+            {
+                throw new ConflictException("Card", "UserId", "Người dùng này đã được gán một thẻ khác trong hệ thống.");
             }
         }
 
@@ -55,11 +66,6 @@ public class CreateCardCommandHandler : IRequestHandler<CreateCardCommand, CardD
             Id = Guid.NewGuid(),
             CardNumber = normalizedCardNumber,
             Type = request.Type,
-            VehiclePlate = request.VehiclePlate?.Trim().ToUpperInvariant(),
-            SkipValidateVehiclePlate = request.SkipValidateVehiclePlate,
-            Info = request.Info?.Trim(),
-            Phone = request.Phone?.Trim(),
-            Room = request.Room?.Trim(),
             UserId = request.UserId,
             Status = request.Status,
             CreatedAt = _dateTimeProvider.UtcNow,
@@ -74,13 +80,13 @@ public class CreateCardCommandHandler : IRequestHandler<CreateCardCommand, CardD
             Id = card.Id,
             CardNumber = card.CardNumber,
             Type = card.Type,
-            VehiclePlate = card.VehiclePlate,
-            SkipValidateVehiclePlate = card.SkipValidateVehiclePlate,
-            Info = card.Info,
-            Phone = card.Phone,
-            Room = card.Room,
             UserId = card.UserId,
             Status = card.Status,
+            UserFullName = linkedUser?.FullName,
+            UserPlateNumber = linkedUser?.PlateNumber,
+            UserPhone = linkedUser?.Phone,
+            UserRoom = linkedUser?.Room,
+            UserStatus = linkedUser?.Status,
             CreatedAt = card.CreatedAt,
             UpdatedAt = card.UpdatedAt
         };

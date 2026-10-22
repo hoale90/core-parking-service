@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using ParkingService.Domain.Enums;
 using ParkingService.Infrastructure.Persistence;
 
 #nullable disable
@@ -35,32 +36,17 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(100)
                     .HasColumnType("TEXT");
 
-                b.Property<string>("Info")
-                    .HasMaxLength(250)
-                    .HasColumnType("TEXT");
-
                 b.Property<bool>("IsDeleted")
-                    .ValueGeneratedOnAdd()
-                    .HasColumnType("INTEGER")
-                    .HasDefaultValue(false);
-
-                b.Property<string>("Phone")
-                    .HasMaxLength(20)
-                    .HasColumnType("TEXT");
-
-                b.Property<string>("Room")
-                    .HasMaxLength(50)
-                    .HasColumnType("TEXT");
-
-                b.Property<bool>("SkipValidateVehiclePlate")
                     .ValueGeneratedOnAdd()
                     .HasColumnType("INTEGER")
                     .HasDefaultValue(false);
 
                 b.Property<string>("Status")
                     .IsRequired()
+                    .ValueGeneratedOnAdd()
                     .HasMaxLength(20)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue("Active");
 
                 b.Property<string>("Type")
                     .IsRequired()
@@ -77,10 +63,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("TEXT");
 
                 b.Property<Guid?>("UserId")
-                    .HasColumnType("TEXT");
-
-                b.Property<string>("VehiclePlate")
-                    .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
                 b.HasKey("Id");
@@ -135,13 +117,6 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
-                b.Property<string>("Role")
-                    .HasMaxLength(50)
-                    .HasColumnType("TEXT");
-
-                b.Property<int?>("RoleId")
-                    .HasColumnType("INTEGER");
-
                 b.Property<string>("Room")
                     .HasMaxLength(50)
                     .HasColumnType("TEXT");
@@ -158,11 +133,9 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasMaxLength(100)
                     .HasColumnType("TEXT");
 
-                b.Property<string>("Username")
-                    .HasMaxLength(100)
-                    .HasColumnType("TEXT");
-
                 b.HasKey("Id");
+
+                b.HasIndex("PlateNumber");
 
                 b.ToTable("Users", (string)null);
             });
@@ -172,7 +145,7 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.HasOne("ParkingService.Domain.Entities.User", "User")
                     .WithMany("Cards")
                     .HasForeignKey("UserId")
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 b.Navigation("User");
             });
