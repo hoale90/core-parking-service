@@ -45,8 +45,17 @@ partial class InitialCreate
 
                 b.Property<string>("Status")
                     .IsRequired()
+                    .ValueGeneratedOnAdd()
                     .HasMaxLength(20)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue("Active");
+
+                b.Property<string>("Type")
+                    .IsRequired()
+                    .ValueGeneratedOnAdd()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue("Registered");
 
                 b.Property<DateTime?>("UpdatedAt")
                     .HasColumnType("TEXT");
@@ -106,6 +115,14 @@ partial class InitialCreate
                     .HasMaxLength(20)
                     .HasColumnType("TEXT");
 
+                b.Property<string>("PlateNumber")
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Room")
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
                 b.Property<string>("Status")
                     .IsRequired()
                     .HasMaxLength(20)
@@ -120,6 +137,8 @@ partial class InitialCreate
 
                 b.HasKey("Id");
 
+                b.HasIndex("PlateNumber");
+
                 b.ToTable("Users", (string)null);
             });
 
@@ -128,7 +147,7 @@ partial class InitialCreate
                 b.HasOne("ParkingService.Domain.Entities.User", "User")
                     .WithMany("Cards")
                     .HasForeignKey("UserId")
-                    .OnDelete(DeleteBehavior.Restrict);
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 b.Navigation("User");
             });

@@ -46,11 +46,10 @@ public class CreateCardCommandHandlerTests
         // Act
         var act = async () => await _handler.Handle(command, CancellationToken.None);
 
-        // Assert - Realistic ConflictException verification
+        // Assert
         var exception = await act.Should().ThrowAsync<ConflictException>();
         exception.WithMessage($"*Card*{existingCardNumber}*");
 
-        // Verify that AddAsync and SaveChangesAsync were NEVER called
         _cardRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Card>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -65,8 +64,8 @@ public class CreateCardCommandHandlerTests
             .ReturnsAsync(false);
 
         _userRepositoryMock
-            .Setup(r => r.ExistsAsync(nonExistentUserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(false);
+            .Setup(r => r.GetByIdAsync(nonExistentUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
 
         var command = new CreateCardCommand(
             CardNumber: "0099887766",
@@ -75,12 +74,39 @@ public class CreateCardCommandHandlerTests
         // Act
         var act = async () => await _handler.Handle(command, CancellationToken.None);
 
-        // Assert - Realistic NotFoundException verification
+        // Assert
         var exception = await act.Should().ThrowAsync<NotFoundException>();
         exception.WithMessage($"*User*{nonExistentUserId}*");
 
-        // Verify that AddAsync was never called
         _cardRepositoryMock.Verify(r => r.AddAsync(It.IsAny<Card>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenUserAlreadyHasACard_ShouldThrowConflictExceptionForOneToOneRule()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _cardRepositoryMock
+            .Setup(r => r.AnyAsync(It.Is<Expression<Func<Card, bool>>>(e => e.ToString().Contains("CardNumber")), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User { Id = userId, FullName = "Nguyễn Văn A" });
+
+        // User already has a card
+        _cardRepositoryMock
+            .Setup(r => r.AnyAsync(It.Is<Expression<Func<Card, bool>>>(e => e.ToString().Contains("UserId")), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var command = new CreateCardCommand(CardNumber: "CARD-NEW", UserId: userId);
+
+        // Act
+        var act = async () => await _handler.Handle(command, CancellationToken.None);
+
+        // Assert - Rule 1 User 1 Card
+        var exception = await act.Should().ThrowAsync<ConflictException>();
+        exception.WithMessage("*gán một thẻ khác*");
     }
 
     [Fact]
@@ -115,6 +141,9 @@ public class CreateCardCommandHandlerTests
         result.CardNumber.Should().Be(cardNumber);
         result.UserId.Should().BeNull();
         result.Status.Should().Be(CardStatus.Active);
+        result.Type.Should().Be(CardType.Registered);
+        result.UserFullName.Should().BeNull();
+        result.UserPlateNumber.Should().BeNull();
         result.CreatedAt.Should().Be(fixedTime);
 
         savedCard.Should().NotBeNull();
@@ -125,7 +154,7 @@ public class CreateCardCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenUserIdIsValidAndExists_ShouldCreateCardLinkedToUser()
+    public async Task Handle_WhenUserIdIsValidAndExists_ShouldCreateCardLinkedToUserWithPlateNumber()
     {
         // Arrange
         var validUserId = Guid.NewGuid();
@@ -138,8 +167,16 @@ public class CreateCardCommandHandlerTests
             .ReturnsAsync(false);
 
         _userRepositoryMock
-            .Setup(r => r.ExistsAsync(validUserId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
+            .Setup(r => r.GetByIdAsync(validUserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new User
+            {
+                Id = validUserId,
+                FullName = "Nguyễn Văn Nam",
+                PlateNumber = "59-X1 123.45",
+                Phone = "0901234567",
+                Room = "A16",
+                Status = UserStatus.Active
+            });
 
         Card? savedCard = null;
         _cardRepositoryMock
@@ -155,10 +192,14 @@ public class CreateCardCommandHandlerTests
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
-        // Assert
+        // Assert - Card returns linked user info including PlateNumber for validation
         result.Should().NotBeNull();
         result.CardNumber.Should().Be(cardNumber);
         result.UserId.Should().Be(validUserId);
+        result.UserFullName.Should().Be("Nguyễn Văn Nam");
+        result.UserPlateNumber.Should().Be("59-X1 123.45");
+        result.UserRoom.Should().Be("A16");
+        result.UserStatus.Should().Be(UserStatus.Active);
         result.CreatedAt.Should().Be(fixedTime);
 
         savedCard.Should().NotBeNull();

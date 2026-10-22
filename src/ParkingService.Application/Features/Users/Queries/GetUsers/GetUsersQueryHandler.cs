@@ -23,11 +23,13 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PaginatedResu
 
         Expression<Func<User, bool>> predicate = u =>
             (!request.Status.HasValue || u.Status == request.Status.Value) &&
+            (string.IsNullOrWhiteSpace(request.Room) || u.Room == request.Room) &&
             (string.IsNullOrWhiteSpace(request.SearchTerm) ||
              u.FullName.Contains(request.SearchTerm) ||
              (u.Email != null && u.Email.Contains(request.SearchTerm)) ||
              (u.Phone != null && u.Phone.Contains(request.SearchTerm)) ||
-             (u.PlateNumber != null && u.PlateNumber.Contains(request.SearchTerm)));
+             (u.PlateNumber != null && u.PlateNumber.Contains(request.SearchTerm)) ||
+             (u.Room != null && u.Room.Contains(request.SearchTerm)));
 
         var pagedUsers = await _userRepository.GetPagedAsync(
             pageNumber,
@@ -42,11 +44,12 @@ public class GetUsersQueryHandler : IRequestHandler<GetUsersQuery, PaginatedResu
             {
                 Id = u.Id,
                 FullName = u.FullName,
-                DateOfBirth = u.DateOfBirth,
-                Gender = u.Gender,
                 Phone = u.Phone,
                 Email = u.Email,
                 PlateNumber = u.PlateNumber,
+                Room = u.Room,
+                DateOfBirth = u.DateOfBirth,
+                Gender = u.Gender,
                 Status = u.Status,
                 CreatedAt = u.CreatedAt,
                 UpdatedAt = u.UpdatedAt

@@ -17,10 +17,12 @@ public partial class InitialCreate : Migration
             {
                 Id = table.Column<Guid>(type: "TEXT", nullable: false),
                 FullName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                DateOfBirth = table.Column<DateTime>(type: "TEXT", nullable: true),
-                Gender = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
                 Phone = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
                 Email = table.Column<string>(type: "TEXT", maxLength: 150, nullable: true),
+                PlateNumber = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
+                Room = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                DateOfBirth = table.Column<DateTime>(type: "TEXT", nullable: true),
+                Gender = table.Column<string>(type: "TEXT", maxLength: 20, nullable: true),
                 Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
                 CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                 UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
@@ -40,7 +42,8 @@ public partial class InitialCreate : Migration
                 Id = table.Column<Guid>(type: "TEXT", nullable: false),
                 CardNumber = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                 UserId = table.Column<Guid>(type: "TEXT", nullable: true),
-                Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false),
+                Type = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false, defaultValue: "Registered"),
+                Status = table.Column<string>(type: "TEXT", maxLength: 20, nullable: false, defaultValue: "Active"),
                 CreatedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
                 UpdatedAt = table.Column<DateTime>(type: "TEXT", nullable: true),
                 CreatedBy = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
@@ -55,7 +58,7 @@ public partial class InitialCreate : Migration
                     column: x => x.UserId,
                     principalTable: "Users",
                     principalColumn: "Id",
-                    onDelete: ReferentialAction.Restrict);
+                    onDelete: ReferentialAction.SetNull);
             });
 
         migrationBuilder.CreateIndex(
@@ -68,6 +71,11 @@ public partial class InitialCreate : Migration
             name: "IX_Cards_UserId",
             table: "Cards",
             column: "UserId");
+
+        migrationBuilder.CreateIndex(
+            name: "IX_Users_PlateNumber",
+            table: "Users",
+            column: "PlateNumber");
     }
 
     /// <inheritdoc />

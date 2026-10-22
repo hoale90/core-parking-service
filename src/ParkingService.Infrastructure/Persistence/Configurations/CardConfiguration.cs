@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ParkingService.Domain.Entities;
+using ParkingService.Domain.Enums;
 
 namespace ParkingService.Infrastructure.Persistence.Configurations;
 
@@ -20,9 +21,18 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
         builder.HasIndex(c => c.CardNumber)
             .IsUnique();
 
+        builder.Property(c => c.Type)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .HasDefaultValue(CardType.Registered)
+            .HasSentinel((CardType)0)
+            .IsRequired();
+
         builder.Property(c => c.Status)
             .HasConversion<string>()
             .HasMaxLength(20)
+            .HasDefaultValue(CardStatus.Active)
+            .HasSentinel((CardStatus)0)
             .IsRequired();
 
         builder.Property(c => c.UserId)
@@ -42,11 +52,11 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
         builder.Property(c => c.IsDeleted)
             .HasDefaultValue(false);
 
-        // Relationship: One User has many Cards, Card optionally belongs to one User
+        // Relationship: One User can have Cards, Card optionally belongs to one User
         builder.HasOne(c => c.User)
             .WithMany(u => u.Cards)
             .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Restrict)
+            .OnDelete(DeleteBehavior.SetNull)
             .IsRequired(false);
 
         // Soft delete query filter

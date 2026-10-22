@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using FluentAssertions;
 using Moq;
 using ParkingService.Application.Common.Interfaces;
@@ -12,12 +13,14 @@ namespace ParkingService.Tests.Features.Users;
 public class GetUserByIdQueryHandlerTests
 {
     private readonly Mock<IRepository<User>> _userRepositoryMock;
+    private readonly Mock<IRepository<Card>> _cardRepositoryMock;
     private readonly GetUserByIdQueryHandler _handler;
 
     public GetUserByIdQueryHandlerTests()
     {
         _userRepositoryMock = new Mock<IRepository<User>>();
-        _handler = new GetUserByIdQueryHandler(_userRepositoryMock.Object);
+        _cardRepositoryMock = new Mock<IRepository<Card>>();
+        _handler = new GetUserByIdQueryHandler(_userRepositoryMock.Object, _cardRepositoryMock.Object);
     }
 
     [Fact]
@@ -40,7 +43,7 @@ public class GetUserByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenUserExists_ShouldReturnCorrectUserDto()
+    public async Task Handle_WhenUserExists_ShouldReturnCorrectUserDtoWithLinkedCard()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -48,6 +51,7 @@ public class GetUserByIdQueryHandlerTests
         {
             Id = userId,
             FullName = "Đặng Hoàng Phúc",
+            Room = "B22",
             Email = "phuc.dang@example.com",
             Phone = "0933112233",
             Gender = "Nam",
@@ -56,9 +60,21 @@ public class GetUserByIdQueryHandlerTests
             CreatedAt = DateTime.UtcNow
         };
 
+        var card = new Card
+        {
+            Id = Guid.NewGuid(),
+            CardNumber = "2848255313",
+            UserId = userId,
+            Status = CardStatus.Active
+        };
+
         _userRepositoryMock
             .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
+
+        _cardRepositoryMock
+            .Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<Card, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(card);
 
         var query = new GetUserByIdQuery(userId);
 
@@ -69,8 +85,9 @@ public class GetUserByIdQueryHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().Be(userId);
         result.FullName.Should().Be("Đặng Hoàng Phúc");
+        result.Room.Should().Be("B22");
         result.Email.Should().Be("phuc.dang@example.com");
         result.PlateNumber.Should().Be("29A-888.88");
-        result.Status.Should().Be(UserStatus.Active);
+        result.LinkedCardNumber.Should().Be("2848255313");
     }
 }

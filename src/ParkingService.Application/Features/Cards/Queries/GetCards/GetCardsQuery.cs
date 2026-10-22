@@ -10,5 +10,6 @@ public record GetCardsQuery(
     int PageSize = 10,
     Guid? UserId = null,
     CardStatus? Status = null,
+    CardType? Type = null,
     string? SearchTerm = null
 ) : IRequest<PaginatedResult<CardDto>>;

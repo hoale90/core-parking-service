@@ -1,5 +1,6 @@
 using FluentValidation.TestHelper;
 using ParkingService.Application.Features.Cards.Commands.CreateCard;
+using ParkingService.Domain.Enums;
 using Xunit;
 
 namespace ParkingService.Tests.Features.Cards;
@@ -50,6 +51,22 @@ public class CreateCardCommandValidatorTests
     {
         // Arrange
         var command = new CreateCardCommand(CardNumber: validCardNumber);
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_WhenCardCommandHasValidData_ShouldNotHaveAnyValidationErrors()
+    {
+        // Arrange
+        var command = new CreateCardCommand(
+            CardNumber: "2848255313",
+            Type: CardType.Registered,
+            Status: CardStatus.Active);
 
         // Act
         var result = _validator.TestValidate(command);

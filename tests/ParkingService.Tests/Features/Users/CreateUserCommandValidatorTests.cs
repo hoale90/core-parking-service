@@ -131,11 +131,28 @@ public class CreateUserCommandValidatorTests
     }
 
     [Fact]
+    public void Validate_WhenRoomExceeds50Characters_ShouldHaveValidationError()
+    {
+        // Arrange
+        var command = new CreateUserCommand(
+            FullName: "Nguyễn Văn An",
+            Room: new string('R', 51));
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.Room)
+            .WithErrorMessage("Số phòng không được vượt quá 50 ký tự.");
+    }
+
+    [Fact]
     public void Validate_WhenAllFieldsAreValid_ShouldNotHaveAnyValidationErrors()
     {
         // Arrange
         var command = new CreateUserCommand(
             FullName: "Nguyễn Văn Nam",
+            Room: "A16",
             DateOfBirth: new DateTime(1990, 5, 15, 0, 0, 0, DateTimeKind.Utc),
             Gender: "Nam",
             Phone: "0912345678",
