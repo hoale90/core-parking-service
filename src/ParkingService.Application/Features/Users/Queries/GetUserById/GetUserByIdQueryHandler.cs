@@ -40,6 +40,7 @@ public class GetUserByIdQueryHandler : IRequestHandler<GetUserByIdQuery, UserDto
             DateOfBirth = user.DateOfBirth,
             Gender = user.Gender,
             Status = user.Status,
+            LinkedCardId = linkedCard?.Id,
             LinkedCardNumber = linkedCard?.CardNumber,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt

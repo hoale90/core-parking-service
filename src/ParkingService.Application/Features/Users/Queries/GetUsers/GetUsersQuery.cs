@@ -10,5 +10,6 @@ public record GetUsersQuery(
     int PageSize = 10,
     UserStatus? Status = null,
     string? Room = null,
-    string? SearchTerm = null
+    string? SearchTerm = null,
+    string? CardStatus = null
 ) : IRequest<PaginatedResult<UserDto>>;

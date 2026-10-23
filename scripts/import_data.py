@@ -73,7 +73,9 @@ def import_data(sql_path: str, db_path: str):
         if is_card_table and line_s:
             parts = line_s.split("\t")
             cid = int(parts[0])
-            uuid = parts[1].strip()
+            uuid = parts[1].strip()
+            if not uuid:
+                continue
             raw_type = parts[2].strip().lower() if len(parts) > 2 else "unknown"
 
             plate = parts[6].strip() if len(parts) > 6 and parts[6] != r"\N" and parts[6].strip() else None
@@ -89,7 +91,7 @@ def import_data(sql_path: str, db_path: str):
             has_resident_data = bool((info and not is_lost) or plate or phone or room)
 
             if has_resident_data:
-                user_guid = f"u0000000-0000-0000-0000-{cid:012d}"
+                user_guid = f"b0000000-0000-0000-0000-{cid:012d}"
                 # Xác định họ tên hiển thị
                 full_name = info if (info and not is_lost) else (phone if phone else f"Cư dân phòng {room}" if room else "Chủ xe " + str(plate))
 

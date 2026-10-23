@@ -86,6 +86,7 @@ public class CreateUserCommandHandler : IRequestHandler<CreateUserCommand, UserD
             DateOfBirth = user.DateOfBirth,
             Gender = user.Gender,
             Status = user.Status,
+            LinkedCardId = cardToLink?.Id,
             LinkedCardNumber = cardToLink?.CardNumber,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
