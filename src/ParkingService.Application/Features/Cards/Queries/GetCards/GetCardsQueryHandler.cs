@@ -4,6 +4,7 @@ using ParkingService.Application.Common.Interfaces;
 using ParkingService.Application.Common.Models;
 using ParkingService.Application.Features.Cards.DTOs;
 using ParkingService.Domain.Entities;
+using ParkingService.Domain.Enums;
 
 namespace ParkingService.Application.Features.Cards.Queries.GetCards;
 
@@ -23,11 +24,25 @@ public class GetCardsQueryHandler : IRequestHandler<GetCardsQuery, PaginatedResu
     public async Task<PaginatedResult<CardDto>> Handle(GetCardsQuery request, CancellationToken cancellationToken)
     {
         var pageNumber = request.PageNumber < 1 ? 1 : request.PageNumber;
-        var pageSize = request.PageSize is < 1 or > 100 ? 10 : request.PageSize;
+        var pageSize = request.PageSize is < 1 or > 1000 ? 10 : request.PageSize;
+
+        var statusStr = request.Status?.Trim().ToLowerInvariant();
+        CardStatus? specificStatus = statusStr switch
+        {
+            "locked" or "blocked" or "2" => CardStatus.Blocked,
+            "lost" or "3" => CardStatus.Lost,
+            "active" or "1" => CardStatus.Active,
+            _ => null
+        };
+        bool filterAvailable = statusStr is "available" or "unassigned";
+        bool filterAssigned = statusStr is "assigned";
 
         Expression<Func<Card, bool>> predicate = c =>
+            !string.IsNullOrWhiteSpace(c.CardNumber) &&
             (!request.UserId.HasValue || c.UserId == request.UserId.Value) &&
-            (!request.Status.HasValue || c.Status == request.Status.Value) &&
+            (!filterAvailable || (c.UserId == null && c.Status == CardStatus.Active)) &&
+            (!filterAssigned || c.UserId != null) &&
+            (!specificStatus.HasValue || c.Status == specificStatus.Value) &&
             (!request.Type.HasValue || c.Type == request.Type.Value) &&
             (string.IsNullOrWhiteSpace(request.SearchTerm) || c.CardNumber.Contains(request.SearchTerm));
 

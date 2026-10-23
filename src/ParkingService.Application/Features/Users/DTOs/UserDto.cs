@@ -53,6 +53,11 @@ public class UserDto
     public UserStatus Status { get; set; }
 
     /// <summary>
+    /// Mã định danh Id của thẻ xe đang liên kết với người dùng (nếu có).
+    /// </summary>
+    public Guid? LinkedCardId { get; set; }
+
+    /// <summary>
     /// Mã số thẻ đang được gán cho người dùng (nếu có).
     /// </summary>
     public string? LinkedCardNumber { get; set; }
