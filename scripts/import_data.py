@@ -84,7 +84,7 @@ def import_data(sql_path: str, db_path: str):
             room = parts[10].strip() if len(parts) > 10 and parts[10] != r"\N" and parts[10].strip() else None
 
             is_lost = bool(info and ("MAT THE" in info.upper() or "MẤT THẺ" in info.upper()))
-            card_status = "Lost" if is_lost else "Active"
+            card_status = "inactive" if is_lost else "active"
             card_guid = f"c0000000-0000-0000-0000-{cid:012d}"
 
             # Kiểm tra xem thẻ có gắn với người dùng / xe thực tế hay không

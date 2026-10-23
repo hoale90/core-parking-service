@@ -29,9 +29,8 @@ public class GetCardsQueryHandler : IRequestHandler<GetCardsQuery, PaginatedResu
         var statusStr = request.Status?.Trim().ToLowerInvariant();
         CardStatus? specificStatus = statusStr switch
         {
-            "locked" or "blocked" or "2" => CardStatus.Blocked,
-            "lost" or "3" => CardStatus.Lost,
-            "active" or "1" => CardStatus.Active,
+            "inactive" or "locked" or "blocked" or "lost" or "2" or "3" or "không hoạt động" => CardStatus.Inactive,
+            "active" or "1" or "hoạt động" => CardStatus.Active,
             _ => null
         };
         bool filterAvailable = statusStr is "available" or "unassigned";

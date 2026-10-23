@@ -2,13 +2,17 @@ using Microsoft.AspNetCore.Mvc;
 using ParkingService.Application.Common.Models;
 using ParkingService.Application.Features.Cards.Commands.AssignUserToCard;
 using ParkingService.Application.Features.Cards.Commands.CreateCard;
+using ParkingService.Application.Features.Cards.Commands.UpdateCardStatus;
 using ParkingService.Application.Features.Cards.DTOs;
 using ParkingService.Application.Features.Cards.Queries.GetCardById;
 using ParkingService.Application.Features.Cards.Queries.GetCards;
+using ParkingService.Domain.Enums;
 
 namespace ParkingService.Api.Controllers;
 
 public record AssignUserRequest(Guid? UserId);
+
+public record UpdateCardStatusApiRequest(object? Status);
 
 /// <summary>
 /// Controller for managing RFID/Mifare access cards.
@@ -72,6 +76,38 @@ public class CardsController : BaseApiController
     public async Task<IActionResult> AssignUser([FromRoute] Guid id, [FromBody] AssignUserRequest request)
     {
         var result = await Mediator.Send(new AssignUserToCardCommand(id, request.UserId));
+        return OkResponse(result);
+    }
+
+    /// <summary>
+    /// Cập nhật trạng thái thẻ: PUT /api/cards/{id}/status (active / inactive).
+    /// Option C: Giữ nguyên cư dân liên kết (nếu có) khi vô hiệu hóa/kích hoạt.
+    /// </summary>
+    /// <param name="id">Id của thẻ</param>
+    /// <param name="request">Chứa trạng thái cần cập nhật (active / inactive)</param>
+    /// <returns>Thông tin thẻ sau khi cập nhật</returns>
+    [HttpPut("{id:guid}/status")]
+    [ProducesResponseType(typeof(ApiResponse<CardDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateStatus([FromRoute] Guid id, [FromBody] UpdateCardStatusApiRequest request)
+    {
+        var rawStatus = request?.Status?.ToString()?.Trim().ToLowerInvariant();
+        CardStatus parsedStatus;
+        if (rawStatus is "active" or "1" or "hoạt động")
+        {
+            parsedStatus = CardStatus.Active;
+        }
+        else if (rawStatus is "inactive" or "2" or "0" or "không hoạt động" or "locked" or "blocked")
+        {
+            parsedStatus = CardStatus.Inactive;
+        }
+        else
+        {
+            return BadRequest(ApiResponse.FailureResponse("INVALID_STATUS", "Trạng thái thẻ không hợp lệ. Cho phép: 'active', 'inactive', 1, 2."));
+        }
+
+        var result = await Mediator.Send(new UpdateCardStatusCommand(id, parsedStatus));
         return OkResponse(result);
     }
 }
