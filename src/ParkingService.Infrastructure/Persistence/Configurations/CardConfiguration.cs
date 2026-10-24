@@ -29,7 +29,9 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
             .IsRequired();
 
         builder.Property(c => c.Status)
-            .HasConversion<string>()
+            .HasConversion(
+                v => v == CardStatus.Active ? "active" : "inactive",
+                v => v.ToLower() == "active" || v == "1" ? CardStatus.Active : CardStatus.Inactive)
             .HasMaxLength(20)
             .HasDefaultValue(CardStatus.Active)
             .HasSentinel((CardStatus)0)
