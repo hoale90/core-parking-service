@@ -18,6 +18,101 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 #pragma warning disable 612, 618
         modelBuilder.HasAnnotation("ProductVersion", "8.0.8");
 
+        modelBuilder.Entity("ParkingService.Domain.Entities.AccessEvent", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("TEXT");
+
+                b.Property<Guid?>("CardId")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("CardNumber")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("CreatedBy")
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Decision")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Direction")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("EventTime")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("ExpectedPlateNumber")
+                    .HasMaxLength(30)
+                    .HasColumnType("TEXT");
+
+                b.Property<bool>("IsDeleted")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasDefaultValue(false);
+
+                b.Property<string>("LaneCode")
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("OcrPlateNumber")
+                    .HasMaxLength(30)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("PlateNormalized")
+                    .HasMaxLength(30)
+                    .HasColumnType("TEXT");
+
+                b.Property<double?>("PlateSimilarityPercent")
+                    .HasColumnType("REAL");
+
+                b.Property<string>("ReasonCode")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<bool>("SkipValidatePlate")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasDefaultValue(false);
+
+                b.Property<string>("SnapshotPath")
+                    .HasMaxLength(255)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UpdatedBy")
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<Guid?>("UserId")
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CardId");
+
+                b.HasIndex("CardNumber");
+
+                b.HasIndex("EventTime");
+
+                b.HasIndex("UserId");
+
+                b.ToTable("AccessEvents", (string)null);
+            });
+
         modelBuilder.Entity("ParkingService.Domain.Entities.Card", b =>
             {
                 b.Property<Guid>("Id")
@@ -78,6 +173,93 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.HasIndex("UserId");
 
                 b.ToTable("Cards", (string)null);
+            });
+
+        modelBuilder.Entity("ParkingService.Domain.Entities.ParkingSession", b =>
+            {
+                b.Property<Guid>("Id")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("TEXT");
+
+                b.Property<Guid?>("CardId")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("CardNumber")
+                    .IsRequired()
+                    .HasMaxLength(50)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("CreatedAt")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("CreatedBy")
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<int?>("DurationMinutes")
+                    .HasColumnType("INTEGER");
+
+                b.Property<Guid?>("EntryEventId")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("EntrySnapshotPath")
+                    .HasMaxLength(255)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime>("EntryTime")
+                    .HasColumnType("TEXT");
+
+                b.Property<Guid?>("ExitEventId")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("ExitSnapshotPath")
+                    .HasMaxLength(255)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime?>("ExitTime")
+                    .HasColumnType("TEXT");
+
+                b.Property<bool>("IsDeleted")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasDefaultValue(false);
+
+                b.Property<string>("PlateNumber")
+                    .HasMaxLength(30)
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("Status")
+                    .IsRequired()
+                    .HasMaxLength(20)
+                    .HasColumnType("TEXT");
+
+                b.Property<DateTime?>("UpdatedAt")
+                    .HasColumnType("TEXT");
+
+                b.Property<string>("UpdatedBy")
+                    .HasMaxLength(100)
+                    .HasColumnType("TEXT");
+
+                b.Property<Guid?>("UserId")
+                    .HasColumnType("TEXT");
+
+                b.HasKey("Id");
+
+                b.HasIndex("CardId");
+
+                b.HasIndex("CardNumber");
+
+                b.HasIndex("EntryEventId");
+
+                b.HasIndex("ExitEventId");
+
+                b.HasIndex("PlateNumber");
+
+                b.HasIndex("Status");
+
+                b.HasIndex("UserId");
+
+                b.ToTable("ParkingSessions", (string)null);
             });
 
         modelBuilder.Entity("ParkingService.Domain.Entities.User", b =>
@@ -147,12 +329,60 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                 b.ToTable("Users", (string)null);
             });
 
+        modelBuilder.Entity("ParkingService.Domain.Entities.AccessEvent", b =>
+            {
+                b.HasOne("ParkingService.Domain.Entities.Card", "Card")
+                    .WithMany()
+                    .HasForeignKey("CardId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne("ParkingService.Domain.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.Navigation("Card");
+
+                b.Navigation("User");
+            });
+
         modelBuilder.Entity("ParkingService.Domain.Entities.Card", b =>
             {
                 b.HasOne("ParkingService.Domain.Entities.User", "User")
                     .WithMany("Cards")
                     .HasForeignKey("UserId")
                     .OnDelete(DeleteBehavior.SetNull);
+
+                b.Navigation("User");
+            });
+
+        modelBuilder.Entity("ParkingService.Domain.Entities.ParkingSession", b =>
+            {
+                b.HasOne("ParkingService.Domain.Entities.Card", "Card")
+                    .WithMany()
+                    .HasForeignKey("CardId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne("ParkingService.Domain.Entities.AccessEvent", "EntryEvent")
+                    .WithMany()
+                    .HasForeignKey("EntryEventId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne("ParkingService.Domain.Entities.AccessEvent", "ExitEvent")
+                    .WithMany()
+                    .HasForeignKey("ExitEventId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasOne("ParkingService.Domain.Entities.User", "User")
+                    .WithMany()
+                    .HasForeignKey("UserId")
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                b.Navigation("Card");
+
+                b.Navigation("EntryEvent");
+
+                b.Navigation("ExitEvent");
 
                 b.Navigation("User");
             });

@@ -34,6 +34,9 @@ public static class DependencyInjection
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 
+        // Snapshot Image Storage
+        services.AddScoped<ISnapshotStorageService, FileSnapshotStorageService>();
+
         // OCR Service configuration & HttpClient
         services.Configure<OcrSettings>(configuration.GetSection("OcrService"));
         var ocrSettings = configuration.GetSection("OcrService").Get<OcrSettings>() ?? new OcrSettings();
