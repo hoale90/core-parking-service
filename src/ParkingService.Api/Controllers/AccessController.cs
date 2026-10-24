@@ -36,6 +36,18 @@ public class SwipeCardApiRequest
     public IFormFile? Image { get; set; }
 
     /// <summary>
+    /// Cờ kích hoạt gọi Python OCR Service nhận diện biển số từ ảnh:
+    /// - true: Tự động gửi ảnh sang Python OCR Service để đọc biển số.
+    /// - false: Không gọi OCR Service.
+    /// </summary>
+    public bool Ocr { get; set; } = true;
+
+    /// <summary>
+    /// Biển số xe truyền trực tiếp (tùy chọn: dùng khi camera/client đã tự nhận diện sẵn hoặc khi Ocr = false).
+    /// </summary>
+    public string? PlateNumber { get; set; }
+
+    /// <summary>
     /// Ngưỡng phần trăm so khớp biển số tùy chỉnh (0.0 -> 100.0). Nếu bỏ trống sẽ dùng cấu hình hệ thống (mặc định 80%).
     /// </summary>
     public double? CustomThresholdPercent { get; set; }
@@ -54,10 +66,10 @@ public record TestPlateComparisonApiRequest(
 public class AccessController : BaseApiController
 {
     /// <summary>
-    /// Quẹt thẻ tại cổng kiểm soát: Nhận mã thẻ + ảnh chụp camera, tự động nhận diện biển số,
+    /// Quẹt thẻ tại cổng kiểm soát: Nhận mã thẻ + ảnh chụp camera, tự động nhận diện biển số (nếu ocr = true),
     /// so khớp thông tin, ghi nhận lịch sử và trả về quyết định Allowed hoặc Denied mở barrier.
     /// </summary>
-    /// <param name="request">Dữ liệu quẹt thẻ gồm CardNumber, Direction, Image, LaneCode</param>
+    /// <param name="request">Dữ liệu quẹt thẻ gồm CardNumber, Direction, Image, LaneCode, Ocr</param>
     /// <returns>Quyết định mở barrier kèm lý do và thông tin phân tích</returns>
     [HttpPost("swipe")]
     [Consumes("multipart/form-data")]
@@ -77,6 +89,8 @@ public class AccessController : BaseApiController
             ImageStream: stream,
             ImageFileName: request.Image?.FileName,
             LaneCode: request.LaneCode,
+            Ocr: request.Ocr,
+            PlateNumber: request.PlateNumber,
             CustomThresholdPercent: request.CustomThresholdPercent
         );
 

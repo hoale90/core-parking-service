@@ -50,7 +50,7 @@ public class SwipeCardCommandHandler : IRequestHandler<SwipeCardCommand, SwipeCa
 
         // 1. Lưu ảnh chụp snapshot và gọi OCR nhận diện biển số (nếu có truyền ảnh)
         string? snapshotPath = null;
-        string? ocrPlate = null;
+        string? ocrPlate = !string.IsNullOrWhiteSpace(request.PlateNumber) ? request.PlateNumber.Trim() : null;
 
         if (request.ImageStream != null)
         {
@@ -63,7 +63,7 @@ public class SwipeCardCommandHandler : IRequestHandler<SwipeCardCommand, SwipeCa
 
             if (imageBytes.Length > 0)
             {
-                // Lưu file ảnh snapshot
+                // Luôn lưu file ảnh snapshot làm bằng chứng lịch sử ra/vào
                 try
                 {
                     using var saveStream = new MemoryStream(imageBytes);
@@ -77,23 +77,26 @@ public class SwipeCardCommandHandler : IRequestHandler<SwipeCardCommand, SwipeCa
                     // Tiếp tục xử lý ngay cả khi lưu ảnh thất bại
                 }
 
-                // Gửi sang OCR nhận diện biển số
-                try
+                // Chỉ gửi sang Python OCR Service nhận diện biển số khi cờ Ocr == true và chưa có biển số truyền trực tiếp
+                if (request.Ocr && string.IsNullOrWhiteSpace(ocrPlate))
                 {
-                    using var ocrStream = new MemoryStream(imageBytes);
-                    var ocrResult = await _ocrService.RecognizePlateAsync(
-                        ocrStream,
-                        request.ImageFileName ?? "snapshot.jpg",
-                        cancellationToken);
-
-                    if (ocrResult != null && !string.IsNullOrWhiteSpace(ocrResult.PlateNumber))
+                    try
                     {
-                        ocrPlate = ocrResult.PlateNumber.Trim();
+                        using var ocrStream = new MemoryStream(imageBytes);
+                        var ocrResult = await _ocrService.RecognizePlateAsync(
+                            ocrStream,
+                            request.ImageFileName ?? "snapshot.jpg",
+                            cancellationToken);
+
+                        if (ocrResult != null && !string.IsNullOrWhiteSpace(ocrResult.PlateNumber))
+                        {
+                            ocrPlate = ocrResult.PlateNumber.Trim();
+                        }
                     }
-                }
-                catch
-                {
-                    // Bỏ qua lỗi OCR để không làm crash luồng quẹt thẻ
+                    catch
+                    {
+                        // Bỏ qua lỗi OCR để không làm crash luồng quẹt thẻ
+                    }
                 }
             }
         }
@@ -159,8 +162,10 @@ public class SwipeCardCommandHandler : IRequestHandler<SwipeCardCommand, SwipeCa
                 }
                 else if (string.IsNullOrWhiteSpace(ocrPlate))
                 {
-                    reasonCode = "OCR_FAILED";
-                    reasonMessage = "Không nhận diện được biển số xe từ camera. Yêu cầu kiểm tra vị trí xe hoặc ảnh chụp.";
+                    reasonCode = request.Ocr ? "OCR_FAILED" : "NO_PLATE_DETECTED";
+                    reasonMessage = request.Ocr 
+                        ? "Không nhận diện được biển số xe từ camera qua OCR Service." 
+                        : "Không có thông tin biển số xe để đối chiếu (cờ OCR đang tắt và không truyền biển số xe).";
                 }
                 else
                 {

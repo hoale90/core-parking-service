@@ -8,7 +8,7 @@ namespace ParkingService.Application.Features.Access.Commands.SwipeCard;
 /// Lệnh quẹt thẻ xe tại cổng barrier:
 /// - Xác thực mã thẻ và người dùng
 /// - Chụp và lưu ảnh snapshot
-/// - Gọi OCR nhận diện biển số
+/// - Gọi OCR nhận diện biển số (nếu cờ Ocr = true)
 /// - Kiểm tra cờ SkipValidatePlate và so khớp biển số với ngưỡng %
 /// - Ghi nhận lịch sử AccessEvents và cập nhật ParkingSessions
 /// - Trả về quyết định Allowed hoặc Denied
@@ -19,5 +19,7 @@ public record SwipeCardCommand(
     Stream? ImageStream = null,
     string? ImageFileName = null,
     string? LaneCode = null,
+    bool Ocr = true,
+    string? PlateNumber = null,
     double? CustomThresholdPercent = null
 ) : IRequest<SwipeCardResultDto>;

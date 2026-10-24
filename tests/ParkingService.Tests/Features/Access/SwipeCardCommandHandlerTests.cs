@@ -399,4 +399,95 @@ public class SwipeCardCommandHandlerTests
 
         _sessionRepositoryMock.Verify(s => s.AddAsync(It.IsAny<ParkingSession>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task Handle_WhenOcrIsFalse_ShouldNotCallOcrService_AndStillSaveSnapshot()
+    {
+        // Arrange
+        const string cardNumber = "0108394918";
+        var card = new Card
+        {
+            Id = Guid.NewGuid(),
+            CardNumber = cardNumber,
+            Status = CardStatus.Active,
+            SkipValidatePlate = true
+        };
+
+        _cardRepositoryMock
+            .Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<Card, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(card);
+
+        using var imageStream = new MemoryStream(new byte[] { 0xAA, 0xBB });
+        _snapshotStorageMock
+            .Setup(s => s.SaveSnapshotAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync("snapshots/test_no_ocr.jpg");
+
+        var command = new SwipeCardCommand(
+            CardNumber: cardNumber,
+            Direction: AccessDirection.In,
+            ImageStream: imageStream,
+            Ocr: false); // CỜ OCR = FALSE
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Decision.Should().Be(AccessDecision.Allowed);
+        result.SnapshotPath.Should().Be("snapshots/test_no_ocr.jpg");
+
+        // KHÔNG ĐƯỢC GỌI OCR SERVICE
+        _ocrServiceMock.Verify(o => o.RecognizePlateAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _snapshotStorageMock.Verify(s => s.SaveSnapshotAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenOcrIsFalse_AndManualPlateProvided_ShouldValidateAgainstManualPlate()
+    {
+        // Arrange
+        const string cardNumber = "0012345678";
+        const string registeredPlate = "59-X1 123.45";
+        var cardId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var card = new Card
+        {
+            Id = cardId,
+            CardNumber = cardNumber,
+            UserId = userId,
+            Status = CardStatus.Active,
+            SkipValidatePlate = false
+        };
+
+        var user = new User
+        {
+            Id = userId,
+            FullName = "Nguyễn Văn B",
+            PlateNumber = registeredPlate,
+            Status = UserStatus.Active
+        };
+
+        _cardRepositoryMock
+            .Setup(r => r.FirstOrDefaultAsync(It.IsAny<Expression<Func<Card, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(card);
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        var command = new SwipeCardCommand(
+            CardNumber: cardNumber,
+            Direction: AccessDirection.In,
+            Ocr: false,
+            PlateNumber: "59X1-123.45"); // TRUYỀN BIỂN SỐ TRỰC TIẾP
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Decision.Should().Be(AccessDecision.Allowed);
+        result.ReasonCode.Should().Be("VALID");
+        result.PlateSimilarityPercent.Should().Be(100.0);
+
+        _ocrServiceMock.Verify(o => o.RecognizePlateAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }
