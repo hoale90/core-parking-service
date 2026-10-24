@@ -123,6 +123,20 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+// Serilog HTTP request logging (Tự động ghi log chi tiết cho mỗi lượt gọi API: Method, Path, Status, Duration)
+app.UseSerilogRequestLogging(options =>
+{
+    options.MessageTemplate = "HTTP {RequestMethod} {RequestPath} responded {StatusCode} in {Elapsed:0.0000} ms";
+    options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+    {
+        diagnosticContext.Set("ClientIp", httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+        if (httpContext.Request.QueryString.HasValue)
+        {
+            diagnosticContext.Set("QueryString", httpContext.Request.QueryString.Value);
+        }
+    };
+});
+
 // Middleware pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
