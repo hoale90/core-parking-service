@@ -37,6 +37,10 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
             .HasSentinel((CardStatus)0)
             .IsRequired();
 
+        builder.Property(c => c.SkipValidatePlate)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(c => c.UserId)
             .IsRequired(false);
 

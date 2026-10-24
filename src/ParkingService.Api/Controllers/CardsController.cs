@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ParkingService.Application.Common.Models;
 using ParkingService.Application.Features.Cards.Commands.AssignUserToCard;
 using ParkingService.Application.Features.Cards.Commands.CreateCard;
+using ParkingService.Application.Features.Cards.Commands.UpdateCardSkipValidatePlate;
 using ParkingService.Application.Features.Cards.Commands.UpdateCardStatus;
 using ParkingService.Application.Features.Cards.DTOs;
 using ParkingService.Application.Features.Cards.Queries.GetCardById;
@@ -14,13 +15,16 @@ public record AssignUserRequest(Guid? UserId);
 
 public record UpdateCardStatusApiRequest(object? Status);
 
+public record UpdateSkipValidatePlateRequest(bool SkipValidatePlate);
+
 /// <summary>
 /// Controller for managing RFID/Mifare access cards.
 /// </summary>
+[Tags("Cards")]
 public class CardsController : BaseApiController
 {
     /// <summary>
-    /// Thêm thẻ mới vào hệ thống (cho phép userId là null).
+    /// Thêm thẻ mới vào hệ thống (cho phép userId là null, hỗ trợ SkipValidatePlate).
     /// </summary>
     /// <param name="command">Thông tin thẻ cần tạo</param>
     /// <returns>Thông tin thẻ vừa được tạo</returns>
@@ -63,10 +67,11 @@ public class CardsController : BaseApiController
     }
 
     /// <summary>
-    /// Liên kết thẻ với người dùng (1 User - 1 Thẻ) hoặc hủy liên kết (truyền userId = null).
+    /// Liên kết hoặc hủy liên kết thẻ với người dùng (1 User - 1 Thẻ).
+    /// Truyền userId = null để hủy liên kết.
     /// </summary>
-    /// <param name="id">Id của thẻ</param>
-    /// <param name="request">Chứa UserId cần liên kết</param>
+    /// <param name="id">Id của thẻ cần liên kết</param>
+    /// <param name="request">Chứa UserId cần liên kết (hoặc null để gỡ liên kết)</param>
     /// <returns>Thông tin thẻ sau khi liên kết</returns>
     [HttpPut("{id:guid}/assign-user")]
     [ProducesResponseType(typeof(ApiResponse<CardDto>), StatusCodes.Status200OK)]
@@ -108,6 +113,22 @@ public class CardsController : BaseApiController
         }
 
         var result = await Mediator.Send(new UpdateCardStatusCommand(id, parsedStatus));
+        return OkResponse(result);
+    }
+
+    /// <summary>
+    /// Cập nhật cờ bỏ qua kiểm tra biển số xe khi quẹt thẻ ra/vào: PUT /api/cards/{id}/skip-validate-plate.
+    /// </summary>
+    /// <param name="id">Id của thẻ</param>
+    /// <param name="request">Chứa giá trị SkipValidatePlate (true/false)</param>
+    /// <returns>Thông tin thẻ sau khi cập nhật</returns>
+    [HttpPut("{id:guid}/skip-validate-plate")]
+    [ProducesResponseType(typeof(ApiResponse<CardDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateSkipValidatePlate([FromRoute] Guid id, [FromBody] UpdateSkipValidatePlateRequest request)
+    {
+        var result = await Mediator.Send(new UpdateCardSkipValidatePlateCommand(id, request.SkipValidatePlate));
         return OkResponse(result);
     }
 }

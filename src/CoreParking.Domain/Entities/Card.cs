@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using CoreParking.Domain.Enums;
 
 namespace CoreParking.Domain.Entities;
 
 /// <summary>
-/// Thá»±c thá»ƒ Tháº» xe (Card).
-/// Báº¥t biáº¿n quan trá»ng: 1 User chá»‰ Ä‘Æ°á»£c liÃªn káº¿t tá»‘i Ä‘a 1 tháº» xe táº¡i má»™t thá»i Ä‘iá»ƒm.
+/// Thực thể Thẻ xe (Card).
+/// Bất biến quan trọng: 1 User chỉ được liên kết tối đa 1 thẻ xe tại một thời điểm.
 /// </summary>
 public class Card
 {
@@ -14,12 +14,13 @@ public class Card
     public Guid? UserId { get; private set; }
     public CardType Type { get; private set; } = CardType.Resident;
     public CardStatus Status { get; private set; } = CardStatus.Active;
+    public bool SkipValidatePlate { get; private set; } = false;
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
 
     // EF Core Constructor
     private Card() { }
 
-    public Card(Guid id, string cardNumber, CardType type = CardType.Resident, CardStatus status = CardStatus.Active)
+    public Card(Guid id, string cardNumber, CardType type = CardType.Resident, CardStatus status = CardStatus.Active, bool skipValidatePlate = false)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Card Id cannot be empty.", nameof(id));
@@ -31,6 +32,7 @@ public class Card
 
         Type = type;
         Status = status;
+        SkipValidatePlate = skipValidatePlate;
         UserId = null;
         CreatedAt = DateTime.UtcNow;
     }
@@ -41,7 +43,7 @@ public class Card
             throw new ArgumentException("Target User Id cannot be empty.", nameof(userId));
 
         if (Status != CardStatus.Active)
-            throw new InvalidOperationException($"KhÃ´ng thá»ƒ gÃ¡n tháº» {CardNumber} vÃ¬ tháº» Ä‘ang á»Ÿ tráº¡ng thÃ¡i {Status}.");
+            throw new InvalidOperationException($"Không thể gán thẻ {CardNumber} vì thẻ đang ở trạng thái {Status}.");
 
         UserId = userId;
     }
@@ -56,8 +58,13 @@ public class Card
         Status = newStatus;
         if (newStatus == CardStatus.Locked || newStatus == CardStatus.Lost)
         {
-            // Tá»± Ä‘á»™ng giáº£i phÃ³ng liÃªn káº¿t náº¿u tháº» bá»‹ khÃ³a hoáº·c bÃ¡o máº¥t
+            // Tự động giải phóng liên kết nếu thẻ bị khóa hoặc báo mất
             UserId = null;
         }
+    }
+
+    public void SetSkipValidatePlate(bool skip)
+    {
+        SkipValidatePlate = skip;
     }
 }

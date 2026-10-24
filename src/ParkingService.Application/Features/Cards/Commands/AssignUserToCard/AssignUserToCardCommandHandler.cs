@@ -81,6 +81,7 @@ public class AssignUserToCardCommandHandler : IRequestHandler<AssignUserToCardCo
             Type = card.Type,
             UserId = card.UserId,
             Status = card.Status,
+            SkipValidatePlate = card.SkipValidatePlate,
             UserFullName = linkedUser?.FullName,
             UserPlateNumber = linkedUser?.PlateNumber,
             UserPhone = linkedUser?.Phone,

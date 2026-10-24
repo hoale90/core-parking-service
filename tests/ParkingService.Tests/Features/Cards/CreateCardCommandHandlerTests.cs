@@ -142,12 +142,14 @@ public class CreateCardCommandHandlerTests
         result.UserId.Should().BeNull();
         result.Status.Should().Be(CardStatus.Active);
         result.Type.Should().Be(CardType.Registered);
+        result.SkipValidatePlate.Should().BeFalse();
         result.UserFullName.Should().BeNull();
         result.UserPlateNumber.Should().BeNull();
         result.CreatedAt.Should().Be(fixedTime);
 
         savedCard.Should().NotBeNull();
         savedCard!.UserId.Should().BeNull();
+        savedCard.SkipValidatePlate.Should().BeFalse();
         savedCard.IsDeleted.Should().BeFalse();
 
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
@@ -205,6 +207,38 @@ public class CreateCardCommandHandlerTests
         savedCard.Should().NotBeNull();
         savedCard!.UserId.Should().Be(validUserId);
 
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenSkipValidatePlateIsTrue_ShouldPersistCardWithFlagTrue()
+    {
+        // Arrange
+        const string cardNumber = "0108394918";
+        _cardRepositoryMock
+            .Setup(r => r.AnyAsync(It.IsAny<Expression<Func<Card, bool>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        Card? savedCard = null;
+        _cardRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<Card>(), It.IsAny<CancellationToken>()))
+            .Callback<Card, CancellationToken>((c, _) => savedCard = c)
+            .ReturnsAsync((Card c, CancellationToken _) => c);
+
+        var command = new CreateCardCommand(
+            CardNumber: cardNumber,
+            SkipValidatePlate: true);
+
+        // Act
+        var result = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.CardNumber.Should().Be(cardNumber);
+        result.SkipValidatePlate.Should().BeTrue();
+
+        savedCard.Should().NotBeNull();
+        savedCard!.SkipValidatePlate.Should().BeTrue();
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

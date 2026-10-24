@@ -40,6 +40,7 @@ public class GetCardByIdQueryHandler : IRequestHandler<GetCardByIdQuery, CardDto
             Type = card.Type,
             UserId = card.UserId,
             Status = card.Status,
+            SkipValidatePlate = card.SkipValidatePlate,
             UserFullName = user?.FullName,
             UserPlateNumber = user?.PlateNumber,
             UserPhone = user?.Phone,

@@ -54,6 +54,7 @@ public class UpdateCardStatusCommandHandler : IRequestHandler<UpdateCardStatusCo
             Type = card.Type,
             UserId = card.UserId,
             Status = card.Status,
+            SkipValidatePlate = card.SkipValidatePlate,
             UserFullName = linkedUser?.FullName,
             UserPlateNumber = linkedUser?.PlateNumber,
             UserPhone = linkedUser?.Phone,

@@ -1,70 +1,42 @@
-import argparse
 import os
+import re
 import sqlite3
 import sys
 
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
-if hasattr(sys.stderr, 'reconfigure'):
-    sys.stderr.reconfigure(encoding='utf-8')
-
-DEFAULT_SQL_PATH = r"C:\Users\PHU\Downloads\data.sql"
-DEFAULT_DB_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "src", "ParkingService.Api", "parking_service.db"
-)
+# Ensure UTF-8 output on Windows terminal
+sys.stdout.reconfigure(encoding='utf-8')
 
 def import_data(sql_path: str, db_path: str):
-    print("=" * 70)
-    print("Core Parking Service - Data Import & Normalization Tool")
-    print(f"Source SQL : {sql_path}")
-    print(f"Target DB  : {db_path}")
-    print("=" * 70)
-
     if not os.path.exists(sql_path):
-        print(f"Error: SQL file not found at '{sql_path}'.", file=sys.stderr)
+        print(f"Lỗi: Không tìm thấy file {sql_path}", file=sys.stderr)
         sys.exit(1)
 
-    if not os.path.exists(db_path):
-        print(f"Error: SQLite database not found at '{db_path}'.", file=sys.stderr)
-        sys.exit(1)
+    print(f"Bắt đầu đọc dữ liệu từ: {sql_path}")
 
-    with open(sql_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
+    # 1. Khởi tạo danh sách chuẩn bị nạp
+    # Users: (Id, FullName, Phone, Email, PlateNumber, Room, DateOfBirth, Gender, Status, CreatedAt, IsDeleted)
+    users = [
+        # Dữ liệu tài khoản quản trị mẫu
+        ("a0000000-0000-0000-0000-000000000001", "Quản Trị Viên Hệ Thống", "0900000001", "admin@parking.vn", None, "BQL", None, "Other", "Active", "2025-11-09T00:00:00Z", 0),
+        ("a0000000-0000-0000-0000-000000000002", "Bảo Vệ Ca Sáng - Nguyễn Văn An", "0900000002", "baove1@parking.vn", None, "Chốt 1", None, "Male", "Active", "2025-11-09T00:00:00Z", 0),
+        ("a0000000-0000-0000-0000-000000000003", "Bảo Vệ Ca Tối - Trần Văn Bình", "0900000003", "baove2@parking.vn", None, "Chốt 2", None, "Male", "Active", "2025-11-09T00:00:00Z", 0),
+    ]
 
-    users = []
+    # Cards: (Id, CardNumber, UserId, Type, Status, SkipValidatePlate, CreatedAt, IsDeleted)
     cards = []
 
-    # 1. Thêm các tài khoản quản trị/nhân viên từ COPY public."User"
-    is_user_table = False
-    for line in lines:
-        line_s = line.strip()
-        if line_s.startswith('COPY public."User" '):
-            is_user_table = True
-            continue
-        if is_user_table and line_s == r"\.":
-            is_user_table = False
-            continue
-        if is_user_table and line_s:
-            parts = line_s.split("\t")
-            uid = int(parts[0])
-            name = parts[2].strip()
-            # Id, FullName, Phone, Email, PlateNumber, Room, DateOfBirth, Gender, Status, CreatedAt, IsDeleted
-            user_guid = f"a0000000-0000-0000-0000-{uid:012d}"
-            users.append((user_guid, name, None, None, None, None, None, None, "Active", "2025-11-09T00:00:00Z", 0))
+    # 2. Đọc file data.sql để lấy thông tin Card và Cư Dân
+    with open(sql_path, "r", encoding="utf-8", errors="ignore") as f:
+        lines = f.readlines()
 
-    # 2. Xử lý 530 Cards từ COPY public."Card":
-    # - Nếu card có thông tin người dùng (info / vehiclePlate / room / phone):
-    #   -> Tách thông tin cá nhân và số xe sang bảng Users
-    #   -> Liên kết 1 User - 1 Thẻ (Card.UserId = User.Id)
-    # - Nếu card chưa gán người dùng: Card.UserId = NULL
     is_card_table = False
     linked_count = 0
     unassigned_count = 0
+    skip_plate_count = 0
 
     for line in lines:
         line_s = line.strip()
-        if line_s.startswith('COPY public."Card" '):
+        if 'COPY public."Card"' in line_s:
             is_card_table = True
             continue
         if is_card_table and line_s == r"\.":
@@ -73,12 +45,17 @@ def import_data(sql_path: str, db_path: str):
         if is_card_table and line_s:
             parts = line_s.split("\t")
             cid = int(parts[0])
-            uuid = parts[1].strip()
-            if not uuid:
-                continue
+            uuid = parts[1].strip()
+            if not uuid:
+                continue
             raw_type = parts[2].strip().lower() if len(parts) > 2 else "unknown"
 
             plate = parts[6].strip() if len(parts) > 6 and parts[6] != r"\N" and parts[6].strip() else None
+            skip_plate_raw = parts[7].strip().lower() if len(parts) > 7 else "f"
+            skip_validate_plate = 1 if skip_plate_raw == "t" else 0
+            if skip_validate_plate == 1:
+                skip_plate_count += 1
+
             info = parts[8].strip() if len(parts) > 8 and parts[8] != r"\N" and parts[8].strip() else None
             phone = parts[9].strip() if len(parts) > 9 and parts[9] != r"\N" and parts[9].strip() else None
             room = parts[10].strip() if len(parts) > 10 and parts[10] != r"\N" and parts[10].strip() else None
@@ -117,6 +94,7 @@ def import_data(sql_path: str, db_path: str):
                     user_guid,
                     "Registered",
                     card_status,
+                    skip_validate_plate,
                     "2025-11-09T00:00:00Z",
                     0
                 ))
@@ -129,6 +107,7 @@ def import_data(sql_path: str, db_path: str):
                     None,      # UserId = NULL
                     "Unknown",
                     card_status,
+                    skip_validate_plate,
                     "2025-11-09T00:00:00Z",
                     0
                 ))
@@ -136,6 +115,7 @@ def import_data(sql_path: str, db_path: str):
 
     print(f"Tổng số Users chuẩn bị nạp : {len(users)} (3 hệ thống + {linked_count} cư dân có số xe)")
     print(f"Tổng số Cards chuẩn bị nạp : {len(cards)} ({linked_count} thẻ đã liên kết 1-1 + {unassigned_count} thẻ chưa gán)")
+    print(f"Trong đó có {skip_plate_count} thẻ SkipValidatePlate = 1 (true)")
 
     # 3. Nạp vào SQLite
     conn = sqlite3.connect(db_path)
@@ -144,15 +124,28 @@ def import_data(sql_path: str, db_path: str):
     try:
         cursor.execute("BEGIN TRANSACTION;")
 
+        # Đảm bảo cột SkipValidatePlate tồn tại trong bảng Cards
+        cursor.execute("PRAGMA table_info(Cards);")
+        existing_columns = [col[1] for col in cursor.fetchall()]
+        if "SkipValidatePlate" not in existing_columns:
+            print("Thêm cột SkipValidatePlate vào bảng Cards trong SQLite...")
+            cursor.execute("ALTER TABLE Cards ADD COLUMN SkipValidatePlate INTEGER NOT NULL DEFAULT 0;")
+
         cursor.executemany("""
             INSERT OR REPLACE INTO Users (Id, FullName, Phone, Email, PlateNumber, Room, DateOfBirth, Gender, Status, CreatedAt, IsDeleted)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, users)
 
         cursor.executemany("""
-            INSERT OR REPLACE INTO Cards (Id, CardNumber, UserId, Type, Status, CreatedAt, IsDeleted)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO Cards (Id, CardNumber, UserId, Type, Status, SkipValidatePlate, CreatedAt, IsDeleted)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, cards)
+
+        # Cập nhật migration history
+        cursor.execute("""
+            INSERT OR IGNORE INTO "__EFMigrationsHistory" (MigrationId, ProductVersion)
+            VALUES ('20261024103000_AddSkipValidatePlateToCards', '8.0.8');
+        """)
 
         conn.commit()
         print("\n=> Nạp và chuẩn hóa dữ liệu vào SQLite THÀNH CÔNG!")
@@ -164,9 +157,6 @@ def import_data(sql_path: str, db_path: str):
         conn.close()
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Import & Normalize Users and Cards from data.sql into SQLite.")
-    parser.add_argument("--sql", default=DEFAULT_SQL_PATH, help="Path to data.sql")
-    parser.add_argument("--db", default=DEFAULT_DB_PATH, help="Path to parking_service.db")
-    args = parser.parse_args()
-
-    import_data(args.sql, args.db)
+    sql_file = r"C:\Users\PHU\Downloads\data.sql"
+    db_file = os.path.join(os.path.dirname(__file__), "..", "src", "ParkingService.Api", "parking_service.db")
+    import_data(sql_file, db_file)

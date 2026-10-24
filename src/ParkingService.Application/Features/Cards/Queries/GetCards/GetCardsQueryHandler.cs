@@ -75,6 +75,7 @@ public class GetCardsQueryHandler : IRequestHandler<GetCardsQuery, PaginatedResu
                     Type = c.Type,
                     UserId = c.UserId,
                     Status = c.Status,
+                    SkipValidatePlate = c.SkipValidatePlate,
                     UserFullName = user?.FullName,
                     UserPlateNumber = user?.PlateNumber,
                     UserPhone = user?.Phone,

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using CoreParking.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -13,7 +13,7 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
 
         builder.HasKey(c => c.Id);
 
-        // Chuyá»ƒn Ä‘á»•i GUID sang chuá»—i in hoa (UPPERCASE) vÃ  thiáº¿t láº­p collation NOCASE
+        // Chuyển đổi GUID sang chuỗi in hoa (UPPERCASE) và thiết lập collation NOCASE
         builder.Property(c => c.Id)
             .HasConversion(
                 v => v.ToString().ToUpperInvariant(),
@@ -37,20 +37,24 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
         builder.Property(c => c.Status)
             .IsRequired();
 
+        builder.Property(c => c.SkipValidatePlate)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(c => c.CreatedAt)
             .IsRequired();
 
-        // Chá»‰ má»¥c duy nháº¥t cho mÃ£ tháº»
+        // Chỉ mục duy nhất cho mã thẻ
         builder.HasIndex(c => c.CardNumber)
             .IsUnique();
 
-        // Báº¥t biáº¿n váº­t lÃ½: Filtered Unique Index trÃªn UserId (chá»‰ Ã¡p dá»¥ng khi UserId IS NOT NULL)
-        // 1 CÆ° dÃ¢n chá»‰ cÃ³ tá»‘i Ä‘a 1 tháº» xe trong toÃ n bá»™ há»‡ thá»‘ng
+        // Bất biến vật lý: Filtered Unique Index trên UserId (chỉ áp dụng khi UserId IS NOT NULL)
+        // 1 Cư dân chỉ có tối đa 1 thẻ xe trong toàn bộ hệ thống
         builder.HasIndex(c => c.UserId)
             .IsUnique()
             .HasFilter("[UserId] IS NOT NULL");
 
-        // KhÃ³a ngoáº¡i liÃªn káº¿t tá»›i báº£ng Users
+        // Khóa ngoại liên kết tới bảng Users
         builder.HasOne<User>()
             .WithMany()
             .HasForeignKey(c => c.UserId)

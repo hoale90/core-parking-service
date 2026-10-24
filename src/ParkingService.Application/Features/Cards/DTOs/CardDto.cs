@@ -33,6 +33,12 @@ public class CardDto
     /// </summary>
     public CardStatus Status { get; set; } = CardStatus.Active;
 
+    /// <summary>
+    /// Cờ bỏ qua kiểm tra khớp biển số xe khi quẹt thẻ ra/vào.
+    /// Mặc định là false (phải kiểm tra khớp biển số). Nếu true, cho phép xe qua mà không cần khớp biển số đăng ký.
+    /// </summary>
+    public bool SkipValidatePlate { get; set; } = false;
+
     // --- Thông tin liên kết từ User (dùng để validate số xe và kiểm thử) ---
 
     /// <summary>

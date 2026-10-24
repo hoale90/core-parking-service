@@ -2,8 +2,8 @@
 
 > **Dự án**: Core Parking Service (Hệ thống quản lý bãi đỗ xe thông minh)  
 > **Nền tảng**: C# / .NET 8, ASP.NET Core Web API, SQLite with EF Core 8  
-> **Cập nhật lần cuối**: 2026-10-22  
-> **Trạng thái**: ✅ Hoàn thành thiết kế chuẩn hóa 2 bảng sạch (Users & Cards), liên kết 1 User - 1 Thẻ, tích hợp số xe phục vụ đối chiếu ra/vào.
+> **Cập nhật lần cuối**: 2026-10-24  
+> **Trạng thái**: ✅ Hoàn thành thiết kế chuẩn hóa 2 bảng sạch (Users & Cards), liên kết 1 User - 1 Thẻ, tích hợp cờ `SkipValidatePlate` và số xe phục vụ đối chiếu ra/vào.
 
 ---
 
@@ -19,12 +19,12 @@ Hệ thống được thiết kế tách biệt rõ ràng giữa **Thông tin c�
  │ FullName (string)                       │────────────│ CardNumber (string, Unique)             │
  │ Phone (string?)                         │   UserId   │ UserId (FK -> Users.Id, Nullable)       │
  │ Email (string?)                         │ (1-1 Rule) │ Type (Registered, Temporary, Unknown)   │
- │ PlateNumber (string?, Indexed)          │            │ Status (Active, Blocked, Lost)          │
- │ Room (string?, Số phòng/căn hộ)         │            │ CreatedAt (DateTime UTC)                │
- │ DateOfBirth, Gender                     │            │ UpdatedAt (DateTime? UTC)               │
- │ Status (Active = 1, Disabled = 2)       │            │ IsDeleted (bool, Soft Delete)           │
- │ CreatedAt, UpdatedAt, IsDeleted         │            └─────────────────────────────────────────┘
- └─────────────────────────────────────────┘
+ │ PlateNumber (string?, Indexed)          │            │ Status (Active = "active", Inactive)    │
+ │ Room (string?, Số phòng/căn hộ)         │            │ SkipValidatePlate (bool, default false) │
+ │ DateOfBirth, Gender                     │            │ CreatedAt (DateTime UTC)                │
+ │ Status (Active = 1, Disabled = 2)       │            │ UpdatedAt (DateTime? UTC)               │
+ │ CreatedAt, UpdatedAt, IsDeleted         │            │ IsDeleted (bool, Soft Delete)           │
+ └─────────────────────────────────────────┘            └─────────────────────────────────────────┘
 ```
 
 ### 1.1. Bảng `Users` (Thông tin cá nhân & Số xe)
@@ -41,13 +41,14 @@ Hệ thống được thiết kế tách biệt rõ ràng giữa **Thông tin c�
   - `CreatedAt`, `UpdatedAt`, `IsDeleted`: Thời gian UTC & cờ soft-delete
 
 ### 1.2. Bảng `Cards` (Thông tin thẻ RFID)
-- **Mục đích**: Quản lý danh sách thẻ chip RFID/Mifare, trạng thái thẻ và liên kết người dùng.
+- **Mục đích**: Quản lý danh sách thẻ chip RFID/Mifare, trạng thái thẻ, liên kết người dùng và cờ cấu hình đối soát biển số.
 - **Các trường**:
   - `Id`: Khóa chính Guid
   - `CardNumber`: Mã số in hoặc đọc từ thẻ (Unique Index)
   - `UserId`: Khóa ngoại trỏ tới `Users.Id` (Nullable để hỗ trợ thẻ chưa gán hoặc thẻ khách vãng lai)
   - `Type`: Phân loại thẻ (`Registered` = 1, `Temporary` = 2, `Unknown` = 3)
-  - `Status`: Trạng thái thẻ (`Active` = 1, `Blocked` = 2, `Lost` = 3)
+  - `Status`: Trạng thái thẻ (`Active` = "active", `Inactive` = "inactive")
+  - `SkipValidatePlate`: **Cờ bỏ qua đối chiếu biển số xe** (bool, mặc định `false`). Nếu `true`, hệ thống cho phép xe qua barrier mà không bắt buộc trùng khớp với biển số xe đăng ký của người dùng (tương thích trường `skipValidateVehiclePlate` từ hệ thống cũ).
   - `CreatedAt`, `UpdatedAt`, `IsDeleted`: Thời gian UTC & cờ soft-delete
 - **Loại bỏ hoàn toàn các trường dư thừa**: Các trường như tên, số điện thoại, biển số xe, số phòng không lưu trực tiếp ở bảng `Cards` mà lấy từ `Users` qua quan hệ `UserId`.
 
@@ -71,7 +72,8 @@ Khi phương tiện tới barrier quẹt thẻ:
                        Lấy User từ Card.UserId
                                │
                                ├── 4. User.Status != Active? (Vô hiệu hóa) ────▶ TỪ CHỐI (DENIED)
-                               ├── 5. User.PlateNumber != DetectedPlate? ─────▶ TỪ CHỐI (DENIED)
+                               ├── 5. Card.SkipValidatePlate == true? ────────▶ BỎ QUA KIỂM TRA BIỂN SỐ ──▶ CHẤP THUẬN (ALLOWED)
+                               ├── 6. User.PlateNumber != DetectedPlate? ─────▶ TỪ CHỐI (DENIED)
                                │
                                ▼
                        CHẤP THUẬN (ALLOWED) ──▶ Gửi lệnh mở barrier
@@ -82,10 +84,12 @@ Khi phương tiện tới barrier quẹt thẻ:
 ## 3. 📡 Danh Sách API Chính
 
 ### 3.1. Quản Lý Thẻ (Cards)
-- `POST /api/cards`: Thêm thẻ mới vào danh sách (chưa gán hoặc gán ngay `userId`).
-- `GET /api/cards`: Lấy danh sách thẻ (hỗ trợ phân trang, lọc theo `status`, `type`, `userId`, tìm kiếm `searchTerm`). Kết quả trả về kèm thông tin người dùng sở hữu (`userFullName`, `userPlateNumber`, `userRoom`, `userStatus`).
-- `GET /api/cards/{id}`: Lấy chi tiết thẻ kèm biển số xe người dùng.
+- `POST /api/cards`: Thêm thẻ mới vào danh sách (hỗ trợ `userId`, `type`, `status`, `skipValidatePlate`).
+- `GET /api/cards`: Lấy danh sách thẻ (hỗ trợ phân trang, lọc theo `status`, `type`, `userId`, tìm kiếm `searchTerm`). Kết quả trả về kèm `skipValidatePlate` và thông tin người dùng sở hữu (`userFullName`, `userPlateNumber`, `userRoom`, `userStatus`).
+- `GET /api/cards/{id}`: Lấy chi tiết thẻ kèm cờ `skipValidatePlate` và biển số xe người dùng.
 - `PUT /api/cards/{id}/assign-user`: **Liên kết thẻ với 1 User (quy tắc 1 User - 1 Thẻ)** hoặc hủy liên kết (`userId = null`).
+- `PUT /api/cards/{id}/status`: Cập nhật trạng thái thẻ (`active` / `inactive`).
+- `PUT /api/cards/{id}/skip-validate-plate`: Cập nhật cấu hình cờ `skipValidatePlate` (`true` / `false`) cho thẻ.
 
 ### 3.2. Quản Lý Người Dùng (Users)
 - `POST /api/users`: Thêm người dùng mới (có sẵn `plateNumber`, `room`, `phone`, và tùy chọn gán ngay `cardId`).
@@ -98,6 +102,9 @@ Khi phương tiện tới barrier quẹt thẻ:
 
 Dữ liệu từ `data.sql` đã được import và chuẩn hóa sạch sẽ:
 - **Tổng số Users**: **91** (3 tài khoản hệ thống + 88 cư dân kèm số xe và số phòng).
-- **Tổng số Cards**: **530** (88 thẻ đã được liên kết 1-1 với User có số xe + 442 thẻ chưa gán / thẻ vãng lai).
+- **Tổng số Cards**: **529** (88 thẻ đã được liên kết 1-1 với User có số xe + 441 thẻ chưa gán / thẻ vãng lai).
+- **Thẻ cấu hình SkipValidatePlate = true**: **2 thẻ** được nhận diện từ `data.sql`:
+  - Mã thẻ `0108394918` (ID: `c0000000-0000-0000-0000-000000000162`)
+  - Mã thẻ `0354547274` (ID: `c0000000-0000-0000-0000-000000000338`, liên kết cư dân xe `51F-123.45`)
 - **Tập tin cơ sở dữ liệu SQLite**: `src/ParkingService.Api/parking_service.db`.
 - **Script chuẩn hóa dữ liệu**: `python scripts/import_data.py`.

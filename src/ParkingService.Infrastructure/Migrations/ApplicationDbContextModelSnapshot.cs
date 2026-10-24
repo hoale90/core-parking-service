@@ -41,6 +41,11 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
                     .HasColumnType("INTEGER")
                     .HasDefaultValue(false);
 
+                b.Property<bool>("SkipValidatePlate")
+                    .ValueGeneratedOnAdd()
+                    .HasColumnType("INTEGER")
+                    .HasDefaultValue(false);
+
                 b.Property<string>("Status")
                     .IsRequired()
                     .ValueGeneratedOnAdd()
@@ -123,8 +128,10 @@ partial class ApplicationDbContextModelSnapshot : ModelSnapshot
 
                 b.Property<string>("Status")
                     .IsRequired()
+                    .ValueGeneratedOnAdd()
                     .HasMaxLength(20)
-                    .HasColumnType("TEXT");
+                    .HasColumnType("TEXT")
+                    .HasDefaultValue("Active");
 
                 b.Property<DateTime?>("UpdatedAt")
                     .HasColumnType("TEXT");

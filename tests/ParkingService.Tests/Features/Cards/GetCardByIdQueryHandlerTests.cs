@@ -54,6 +54,7 @@ public class GetCardByIdQueryHandlerTests
             Type = CardType.Registered,
             UserId = userId,
             Status = CardStatus.Active,
+            SkipValidatePlate = false,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -86,9 +87,42 @@ public class GetCardByIdQueryHandlerTests
         result.CardNumber.Should().Be("0088776655");
         result.Type.Should().Be(CardType.Registered);
         result.Status.Should().Be(CardStatus.Active);
+        result.SkipValidatePlate.Should().BeFalse();
         result.UserId.Should().Be(userId);
         result.UserFullName.Should().Be("Đinh Hữu Đức");
         result.UserPlateNumber.Should().Be("38B1-28228");
         result.UserRoom.Should().Be("A16");
+    }
+
+    [Fact]
+    public async Task Handle_WhenCardHasSkipValidatePlateTrue_ShouldReturnCardDtoWithSkipValidatePlateTrue()
+    {
+        // Arrange
+        var cardId = Guid.NewGuid();
+        var card = new Card
+        {
+            Id = cardId,
+            CardNumber = "0108394918",
+            Type = CardType.Registered,
+            UserId = null,
+            Status = CardStatus.Active,
+            SkipValidatePlate = true,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _cardRepositoryMock
+            .Setup(r => r.GetByIdAsync(cardId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(card);
+
+        var query = new GetCardByIdQuery(cardId);
+
+        // Act
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(cardId);
+        result.CardNumber.Should().Be("0108394918");
+        result.SkipValidatePlate.Should().BeTrue();
     }
 }
