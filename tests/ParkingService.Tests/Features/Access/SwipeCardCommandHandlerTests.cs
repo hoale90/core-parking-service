@@ -422,22 +422,45 @@ public class SwipeCardCommandHandlerTests
             .Setup(s => s.SaveSnapshotAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync("snapshots/test_no_ocr.jpg");
 
+        AccessEvent? savedEvent = null;
+        _accessEventRepositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<AccessEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<AccessEvent, CancellationToken>((ev, _) => savedEvent = ev)
+            .ReturnsAsync((AccessEvent ev, CancellationToken _) => ev);
+
+        ParkingSession? savedSession = null;
+        _sessionRepositoryMock
+            .Setup(s => s.AddAsync(It.IsAny<ParkingSession>(), It.IsAny<CancellationToken>()))
+            .Callback<ParkingSession, CancellationToken>((s, _) => savedSession = s)
+            .ReturnsAsync((ParkingSession s, CancellationToken _) => s);
+
         var command = new SwipeCardCommand(
             CardNumber: cardNumber,
             Direction: AccessDirection.In,
             ImageStream: imageStream,
-            Ocr: false); // CỜ OCR = FALSE
+            Ocr: false); // CỜ OCR = FALSE và Thẻ SkipValidatePlate = TRUE
 
         // Act
         var result = await _handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.Decision.Should().Be(AccessDecision.Allowed);
+        result.ReasonCode.Should().Be("SKIP_VALIDATE_ALLOWED");
         result.SnapshotPath.Should().Be("snapshots/test_no_ocr.jpg");
 
         // KHÔNG ĐƯỢC GỌI OCR SERVICE
         _ocrServiceMock.Verify(o => o.RecognizePlateAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+
+        // NHƯNG VẪN PHẢI LƯU FILE ẢNH SNAPSHOT
         _snapshotStorageMock.Verify(s => s.SaveSnapshotAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+
+        // Kiểm tra lưu path vào cả AccessEvent và ParkingSession
+        savedEvent.Should().NotBeNull();
+        savedEvent!.SnapshotPath.Should().Be("snapshots/test_no_ocr.jpg");
+        savedEvent.SkipValidatePlate.Should().BeTrue();
+
+        savedSession.Should().NotBeNull();
+        savedSession!.EntrySnapshotPath.Should().Be("snapshots/test_no_ocr.jpg");
     }
 
     [Fact]
